@@ -1,8 +1,10 @@
-use std::{collections::{HashMap}, fs::{read_dir, DirBuilder}, path::PathBuf, sync::Arc};
+use std::{collections::{HashMap}, path::PathBuf, sync::Arc};
 
 use rand::Rng;
-use tokio::sync::RwLock;
+use tokio::{fs::DirBuilder, sync::RwLock};
 use serde::{Serialize, Deserialize};
+
+use crate::TRACKS_DIRECTORY;
 
 
 
@@ -134,9 +136,31 @@ impl Playlists {
         }
     }
 
-    pub async fn get(&self, name: &str) -> Option<Arc<RwLock<Playlist>>> {
+    pub async fn add(&self, id: String, name: String, period: u64) {
+        let mut path = PathBuf::from(TRACKS_DIRECTORY);
+        path.push(id.clone());
+        let _ = DirBuilder::new().recursive(true).create(path).await;
+
+        let mut lock = self.inner.write().await;
+        let playlist = Playlist {
+            id: id.clone(),
+            name,
+            directory: PathBuf::from(id),
+            volume: 0.5,
+            period,
+            tracks: Vec::new()
+        };
+        lock.insert(playlist.id.clone(), Arc::new(RwLock::new(playlist)));
+    }
+
+    // pub async fn delete(&self, id: &str) {
+    //     let mut lock = self.inner.write().await;
+    //     lock.remove(id);
+    // }
+
+    pub async fn get(&self, id: &str) -> Option<Arc<RwLock<Playlist>>> {
         let lock = self.inner.read().await;
-        let playlist = lock.get(name);
+        let playlist = lock.get(id);
         playlist.map(|playlist| playlist.clone())
     }
 

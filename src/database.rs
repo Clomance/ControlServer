@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json;
 use tokio::fs::File;
 
-use crate::{PLAYLISTS_DATABASE_FILE_PATH, TRACKS_DATABASE_FILE_PATH};
+use crate::{PLAYLISTS_DATABASE_FILE_PATH, TRACKS_DATABASE_FILE_PATH, TRACKS_DIRECTORY};
 use crate::playlists::{Playlist, PlaylistConfig, Track, TrackConfig};
 
 
@@ -121,7 +121,7 @@ impl FileDatabase {
         let mut playlists = Vec::new();
 
         for playlist_config in playlists_configs {
-            let mut playlist_directory_path = PathBuf::from("records");
+            let mut playlist_directory_path = PathBuf::from(TRACKS_DIRECTORY);
             playlist_directory_path.push(&playlist_config.directory);
 
             let _ = DirBuilder::new().recursive(true).create(&playlist_directory_path).await.unwrap();

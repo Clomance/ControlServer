@@ -19,12 +19,14 @@ pub enum Event {
     },
     AddPlaylist {
         id: String,
-        name: String
+        name: String,
+        period: u64
     },
     DeletePlaylist(String),
     AddTrack {
         playlist: String,
-        track: String
+        name: String,
+        file: Vec<u8>
     },
     DeleteTrack {
         playlist: String,

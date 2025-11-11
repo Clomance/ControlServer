@@ -6,7 +6,7 @@ use event_queue::*;
 mod playlists;
 use playlists::*;
 mod web;
-use tokio::sync::RwLock;
+use tokio::{fs::DirBuilder, sync::RwLock};
 use web::*;
 mod scheduler;
 use scheduler::*;
@@ -14,13 +14,13 @@ mod server_config;
 use server_config::*;
 mod database;
 use database::*;
-use std::{sync::{Arc}, thread::sleep, time::Duration};
+use std::{path::PathBuf, sync::Arc, thread::sleep, time::Duration};
 
 
 
 pub static PLAYLISTS_DATABASE_FILE_PATH: &str = "database/playlists.json";
 pub static TRACKS_DATABASE_FILE_PATH: &str = "database/tracks.json";
-pub static TRACKS_DIRECTORY: &str = "tracks";
+pub static TRACKS_DIRECTORY: &str = "records";
 
 
 
@@ -55,6 +55,7 @@ async fn main() {
 
     let mut global_volume = config.volume;
     let mut current_playlist = String::new();
+    let mut current_track_id = String::new();
     let current_track: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
     let audio_player = AudioPlayer::new(event_sender.clone());
 
@@ -91,13 +92,17 @@ async fn main() {
                     let playlist_lock = playlist.read().await;
                     let track = playlist_lock.get_random();
                     let playlist_volume = playlist_lock.volume;
-                    drop(playlist_lock);
 
                     if let Some(track) = track {
                         println!("PlayTrack name: {}", track.name);
 
+                        current_playlist = playlist_lock.id.clone();
+                        current_track_id = track.id.clone();
+                        drop(playlist_lock);
+
                         let name = track.name;
                         let path = track.path;
+
                         *current_track.write().await = Some(name.to_string());
 
                         let volume = global_volume * playlist_volume * track.volume;
@@ -140,21 +145,27 @@ async fn main() {
                 if let Some(playlist) = playlists.get(&playlist).await {
                     let playlist_lock = playlist.read().await;
 
-                    if let Some(current_track_name) = &*current_track.read().await {
-                        if current_track_name == &track {
-                            let volume = playlist_lock.volume * global_volume * volume;
-                            audio_player.commander().send(AudioPlayerCommand::Volume(volume));
-                        }
+                    if current_track_id == track {
+                        let volume = playlist_lock.volume * global_volume * volume;
+                        audio_player.commander().send(AudioPlayerCommand::Volume(volume));
                     }
                 }
             }
 
-            Event::AddPlaylist(id) => {
+            Event::AddPlaylist { id, name, period } => {
+                playlists.add(id, name, period).await
+            }
+
+            Event::DeletePlaylist(id) => {
                 
             }
 
-            Event::AddTrack { playlist, track } => {
+            Event::AddTrack { playlist, name, file } => {
                 
+            }
+
+            Event::DeleteTrack { playlist, track } => {
+
             }
         }
     }).await;

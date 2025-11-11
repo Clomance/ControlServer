@@ -78,22 +78,22 @@ impl SchedulerCore {
         let task_name = task.name.clone();
         let mut trigger_time = now + task.period;
 
-        if trigger_time.hour() < START_TIME {
-            trigger_time = trigger_time
-                .date_naive()
-                .and_hms_opt(START_TIME, 0, 0)
-                .unwrap()
-                .and_local_timezone(Local)
-                .unwrap();
-        }
-        if trigger_time.hour() >= END_TIME {
-            trigger_time = (trigger_time + chrono::Duration::days(1))
-                .date_naive()
-                .and_hms_opt(START_TIME, 0, 0)
-                .unwrap()
-                .and_local_timezone(Local)
-                .unwrap();
-        }
+        // if trigger_time.hour() < START_TIME {
+        //     trigger_time = trigger_time
+        //         .date_naive()
+        //         .and_hms_opt(START_TIME, 0, 0)
+        //         .unwrap()
+        //         .and_local_timezone(Local)
+        //         .unwrap();
+        // }
+        // if trigger_time.hour() >= END_TIME {
+        //     trigger_time = (trigger_time + chrono::Duration::days(1))
+        //         .date_naive()
+        //         .and_hms_opt(START_TIME, 0, 0)
+        //         .unwrap()
+        //         .and_local_timezone(Local)
+        //         .unwrap();
+        // }
 
         let entity = SchedulerEntity {
             trigger_time,
