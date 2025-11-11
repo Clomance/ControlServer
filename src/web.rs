@@ -6,7 +6,7 @@ use tower_http::{cors::{Any, CorsLayer}, services::ServeDir};
 use std::{path::{Path as StdPath, PathBuf}, sync::Arc};
 use tokio::sync::RwLock;
 
-use crate::{audio::{AudioPlayerCommand, AudioPlayerCommander}, event_queue::{Event, EventSender}, playlists::{PlaylistInfo, Playlists}};
+use crate::{audio::{AudioPlayerCommand, AudioPlayerCommander}, database::gen_id, event_queue::{Event, EventSender}, playlists::{PlaylistInfo, Playlists}};
 
 
 
@@ -181,16 +181,12 @@ async fn get_playlist(Path(playlist): Path<String>, State(state): State<AppState
         return Err((axum::http::StatusCode::NOT_FOUND, format!("playlist not found")));
     };
 
-    let playlist = playlist.read().await;
-    let volume = playlist.volume;
-    let tracks: Vec<String> = playlist.names();
+    let playlist = playlist.read().await.clone();
 
     Ok(Json(
         serde_json::json!(
             {
-                "volume": volume,
-                "directory": playlist.directory.to_str().unwrap_or(""),
-                "tracks": tracks
+                "playlist": playlist
             }
         )
     ))
@@ -200,7 +196,9 @@ async fn post_playlist(Path(playlist): Path<String>, State(state): State<AppStat
     // Placeholder for future functionality
     println!("POST playlist: {}", playlist);
     // TODO: Implement playlist modification logic here
-    Response::builder().status(200).body("".to_string()).unwrap()
+
+    let id = gen_id();
+    Json(serde_json::json!({ "playlist": id }))
 }
 
 async fn delete_playlist(Path(playlist): Path<String>, State(state): State<AppState>) -> impl IntoResponse {
@@ -247,7 +245,8 @@ async fn post_track(Path((playlist, track)): Path<(String, String)>, State(state
     // Placeholder for future functionality
 
     // TODO: Implement track modification logic here
-    Response::builder().status(200).body("".to_string()).unwrap()
+    let id = gen_id();
+    Json(serde_json::json!({ "track": id }))
 }
 
 async fn delete_track(Path((playlist, track)): Path<(String, String)>, State(state): State<AppState>) -> impl IntoResponse {

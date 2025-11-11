@@ -12,7 +12,7 @@ use crate::playlists::{Playlist, PlaylistConfig, Track, TrackConfig};
 
 
 
-fn gen_id() -> String {
+pub fn gen_id() -> String {
     let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
     let rnd: u32 = rand::random();
     format!("{:x}-{:x}", nanos as u128, rnd)
@@ -86,13 +86,22 @@ impl TracksDatabase {
 
         Ok(data)
     }
+
+    pub async fn save(&self, track: &[TrackConfig]) -> Result<(), String> {
+        let tmp = format!("{}.tmp", &self.path);
+        let json = serde_json::to_string_pretty(track).map_err(|e| format!("failed serialize: {}", e))?;
+        let mut f = File::create(&tmp).await.map_err(|e| format!("failed create tmp file: {}", e))?;
+        f.write_all(json.as_bytes()).await.map_err(|e| format!("failed write tmp file: {}", e))?;
+        tokio::fs::rename(&tmp, &self.path).await.map_err(|e| format!("failed rename tmp file: {}", e))?;
+        Ok(())
+    }
 }
 
 
 
 pub struct FileDatabase {
-    playlists: PlaylistsDatabase,
-    tracks: TracksDatabase
+    pub playlists: PlaylistsDatabase,
+    pub tracks: TracksDatabase
 }
 
 impl FileDatabase {
