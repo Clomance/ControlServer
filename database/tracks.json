@@ -1,0 +1,14 @@
+[
+    {
+        "id": "advert-replica11",
+        "name": "Replica №11 - Екатерина.mp3",
+        "playlist": "advert_playlist",
+        "volume": 0.5
+    },
+    {
+        "id": "advert-replica12",
+        "name": "Replica №12 - Екатерина.mp3",
+        "playlist": "advert_playlist",
+        "volume": 0.5
+    }
+]

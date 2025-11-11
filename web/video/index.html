@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Управление серверами видеонаблюдения</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#3b82f6; --danger:#ef4444; --ok:#10b981;
+      --glass: rgba(255,255,255,0.03);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071026 0%, #071022 100%);color:#e6eef6}
+    .app{max-width:1100px;margin:18px auto;padding:16px}
+
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    button{background:var(--accent);border:none;color:white;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:6px 10px}
+
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px;margin-top:16px}
+    .panel{background:var(--card);padding:12px;border-radius:12px;box-shadow:0 4px 20px rgba(2,6,23,0.6)}
+
+    /* Servers list */
+    .list{display:flex;flex-direction:column;gap:10px}
+    .server{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:var(--glass);}
+    .server .meta{flex:1}
+    .server .meta .name{font-weight:700}
+    .server .meta .addr{font-size:13px;color:var(--muted)}
+    .badges{display:flex;gap:8px;align-items:center}
+    .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.03)}
+    .status.up{color:var(--ok);font-weight:700}
+    .status.down{color:var(--danger);font-weight:700}
+
+    /* Actions */
+    .actions{display:flex;gap:6px}
+    .actions button{padding:6px 8px;border-radius:8px;font-size:13px}
+
+    /* Right column */
+    .add-form{display:flex;flex-direction:column;gap:8px}
+    label{font-size:13px;color:var(--muted)}
+    input,select{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:50}
+    .modal.open{display:flex}
+    .dialog{width:100%;max-width:520px;background:var(--card);padding:16px;border-radius:12px}
+
+    /* Responsive */
+    @media(max-width:880px){
+      .grid{grid-template-columns:1fr;}
+      .panel.right{order:2}
+    }
+
+    footer{margin-top:14px;color:var(--muted);font-size:13px;text-align:center}
+
+    /* tiny helpers */
+    .muted{color:var(--muted)}
+    .row{display:flex;gap:8px;align-items:center}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>Управление серверами видеонаблюдения</h1>
+        <div class="muted">Добавляйте, редактируйте, пингуйте и управляйте питанием</div>
+      </div>
+      <div class="controls">
+        <button id="addBtn">Добавить сервер</button>
+        <button class="ghost" id="importBtn">Импорт / Экспорт</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel left">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div class="muted">Сервера</div>
+          <div class="row"><input id="filter" placeholder="Поиск по имени или адресу" style="padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:inherit"></div>
+        </div>
+
+        <div id="list" class="list" style="margin-top:12px;">
+          <!-- items -->
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="badge">Всего: <span id="count">0</span></div>
+          <div class="badge">Онлайн: <span id="countUp">0</span></div>
+          <div class="badge">Оффлайн: <span id="countDown">0</span></div>
+        </div>
+      </section>
+
+      <aside class="panel right">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="muted">Быстрые действия</div>
+          <div class="muted">Локально сохраняется в localStorage</div>
+        </div>
+
+        <div style="margin-top:12px" class="add-form">
+          <label>Выберите сервер в списке, чтобы увидеть детали и выполнить быстрое действие.</label>
+          <div style="display:flex;gap:8px">
+            <button id="pingAll" class="ghost">Пинг всех</button>
+            <button id="refreshList" class="ghost">Обновить статусы</button>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:12px 0">
+        <div class="muted" style="font-size:13px">Примечание:</div>
+        <div class="muted" style="font-size:13px;margin-top:6px">Чтобы реальные действия (ping, reboot, shutdown) работали, нужен backend/proxy, который выполняет эти команды (CORS и права доступа не позволяют браузеру делать «пинг» и перезагрузку напрямую).</div>
+      </aside>
+    </div>
+
+    <footer>Версия prototype • Клиентская часть на чистом HTML/JS/CSS</footer>
+  </div>
+
+  <!-- Modal: Add / Edit -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="dialog">
+      <h3 id="modalTitle">Добавить сервер</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <label>Имя</label>
+        <input id="m_name" placeholder="Камера 1">
+        <label>Адрес (http(s)://host или ip:port)</label>
+        <input id="m_addr" placeholder="http://192.168.1.10:8080">
+        <label>Логин</label>
+        <input id="m_user" placeholder="admin">
+        <label>Пароль</label>
+        <input id="m_pass" type="password" placeholder="••••••">
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+          <button class="ghost" id="cancel">Отмена</button>
+          <button id="save">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import/Export modal -->
+  <div id="ioModal" class="modal" aria-hidden="true">
+    <div class="dialog">
+      <h3>Импорт / Экспорт</h3>
+      <p class="muted">Экспортирует/импортирует список серверов в формате JSON. Пароли сохраняются в явном виде — будьте осторожны.</p>
+      <textarea id="ioArea" style="width:100%;height:180px;background:transparent;border:1px solid rgba(255,255,255,0.03);color:inherit;padding:8px;border-radius:8px"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+        <button class="ghost" id="ioCancel">Закрыть</button>
+        <button id="doImport">Импорт</button>
+        <button id="doExport" class="ghost">Экспорт</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ===== Data layer (localStorage) ===== */
+    const STORAGE_KEY = 'sv_servers_v1';
+    let servers = load();
+    let selectedId = null;
+
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return [];
+        return JSON.parse(raw);
+      }catch(e){console.error(e);return []}
+    }
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(servers)); }
+
+    /* ===== UI helpers ===== */
+    const listEl = document.getElementById('list');
+    const count = id('count'); const countUp = id('countUp'); const countDown = id('countDown');
+
+    function id(i){return document.getElementById(i)}
+
+    function render(filter=''){
+      listEl.innerHTML='';
+      const f = filter.trim().toLowerCase();
+      let up=0, down=0;
+      servers.forEach(s=>{
+        if(f && !(s.name.toLowerCase().includes(f) || s.addr.toLowerCase().includes(f))) return;
+        const el = document.createElement('div'); el.className='server'; el.dataset.id=s.id;
+        const meta = document.createElement('div'); meta.className='meta';
+        meta.innerHTML = `<div class="name">${escapeHtml(s.name || '(без имени)')}</div><div class="addr">${escapeHtml(s.addr)}</div>`;
+        const badges = document.createElement('div'); badges.className='badges';
+        const stat = document.createElement('div'); stat.className = 'status ' + (s.status==='up'?'up':'down'); stat.textContent = s.status==='up'?'ONLINE':'OFFLINE';
+        if(s.status==='up') up++; else down++;
+        badges.appendChild(stat);
+
+        const actions = document.createElement('div'); actions.className='actions';
+        actions.innerHTML = `
+          <button title="Пинг" data-act="ping">Ping</button>
+          <button title="Перезагрузить" data-act="reboot">Reboot</button>
+          <button title="Выключить" data-act="shutdown">Shutdown</button>
+          <button title="Редактировать" data-act="edit">Edit</button>
+          <button title="Удалить" data-act="del">Del</button>
+        `;
+
+        el.appendChild(meta);
+        el.appendChild(badges);
+        el.appendChild(actions);
+        listEl.appendChild(el);
+
+        // delegate actions
+        actions.addEventListener('click', e=>{
+          const act = e.target.dataset.act;
+          if(!act) return;
+          handleAction(act, s.id);
+        });
+
+        // click select
+        el.addEventListener('click', e=>{
+          // don't select when pressing action buttons
+          if(e.target.closest('button')) return;
+          selectServer(s.id);
+        })
+      });
+      count.textContent = servers.length;
+      countUp.textContent = up;
+      countDown.textContent = down;
+    }
+
+    function selectServer(id_){
+      selectedId = id_;
+      const server = servers.find(x=>x.id===id_);
+      if(!server) return;
+      // highlight and show quick info in right panel (simple alert for prototype)
+      alert(`Сервер: ${server.name}\nАдрес: ${server.addr}\nПользователь: ${server.user}`);
+    }
+
+    function escapeHtml(s){return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');}
+
+    /* ===== Actions ===== */
+    function handleAction(act, id_){
+      const s = servers.find(x=>x.id===id_);
+      if(!s) return;
+      if(act==='del'){
+        if(confirm('Удалить сервер "'+s.name+'"?')){ servers = servers.filter(x=>x.id!==id_); save(); render(id('filter').value); }
+      }else if(act==='edit'){
+        openModal('edit', s);
+      }else if(act==='ping'){
+        pingServer(s).then(res=>{
+          alert('Ping: ' + (res.ok? 'OK ('+res.rtt+' ms)':'FAIL'));
+          updateStatus(s.id, res.ok? 'up':'down');
+        });
+      }else if(act==='reboot' || act==='shutdown'){
+        if(!confirm((act==='reboot'?'Перезагрузить ':'Выключить ')+s.name+' ?')) return;
+        performPowerAction(s, act).then(res=>{
+          if(res.ok){ alert(act==='reboot' ? 'Сервер перезагружен (запрос отправлен).' : 'Сервер выключен (запрос отправлен).'); }
+          else alert('Ошибка: ' + (res.error || 'не удалось выполнить действие'));
+        });
+      }
+    }
+
+    function updateStatus(id_, status){
+      const s = servers.find(x=>x.id===id_); if(!s) return; s.status = status; save(); render(id('filter').value);
+    }
+
+    /* ===== Networking: ping & power ===== */
+    // NOTE: Browsers can't do ICMP ping or remote power actions directly due to CORS and permissions.
+    // This implementation first tries a direct fetch (which often will fail because of CORS),
+    // and then falls back to a simulated latency. For production integrate a backend API.
+
+    async function pingServer(s, timeout=3000){
+      const start = performance.now();
+      // Try a lightweight fetch to the server's address (HEAD). Many devices won't allow CORS.
+      try{
+        const controller = new AbortController();
+        const t = setTimeout(()=>controller.abort(), timeout);
+        const url = s.addr.startsWith('http')? s.addr : (s.addr.startsWith('://')? 'http'+s.addr : 'http://'+s.addr);
+        await fetch(url, {method:'GET', mode:'no-cors', signal:controller.signal});
+        clearTimeout(t);
+        const rtt = Math.round(performance.now() - start);
+        return {ok:true, rtt};
+      }catch(err){
+        // fallback: simulated check
+        const simulated = Math.random() > 0.4; // 60% chance up
+        const rtt = simulated ? Math.round(40 + Math.random()*200) : null;
+        return {ok:simulated, rtt};
+      }
+    }
+
+    async function performPowerAction(s, action){
+      // For real hardware you must implement server-side endpoint that accepts commands and authenticates properly.
+      // Example endpoints (backend required):
+      // POST /api/servers/:id/reboot  { user, pass }
+      // POST /api/servers/:id/shutdown
+      // This function will try a fetch and otherwise simulate success/failure.
+      try{
+        // attempt to call a backend proxy if available
+        const res = await fetch(`/api/servers/${encodeURIComponent(s.id)}/${action}`, {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:s.user, pass:s.pass})
+        });
+        if(res.ok) return {ok:true};
+        const txt = await res.text();
+        return {ok:false, error:txt};
+      }catch(e){
+        // simulate
+        const ok = Math.random()>0.3;
+        return ok ? {ok:true} : {ok:false, error:'proxy not available'};
+      }
+    }
+
+    /* ===== Modal logic ===== */
+    const modal = id('modal');
+    id('addBtn').addEventListener('click', ()=>openModal('add'));
+    id('cancel').addEventListener('click', closeModal);
+    modal.addEventListener('click', e=>{ if(e.target===modal) closeModal(); });
+    id('save').addEventListener('click', saveModal);
+
+    function openModal(mode, server){
+      modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+      id('modalTitle').textContent = mode==='add' ? 'Добавить сервер' : 'Редактировать сервер';
+      if(mode==='edit' && server){ id('m_name').value=server.name; id('m_addr').value=server.addr; id('m_user').value=server.user; id('m_pass').value=server.pass; id('save').dataset.edit = server.id; }
+      else { id('m_name').value=''; id('m_addr').value=''; id('m_user').value=''; id('m_pass').value=''; delete id('save').dataset.edit; }
+    }
+    function closeModal(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+
+    function saveModal(){
+      const name = id('m_name').value.trim(); const addr = id('m_addr').value.trim(); const user = id('m_user').value.trim(); const pass = id('m_pass').value;
+      if(!addr){ alert('Адрес обязателен'); return; }
+      const editId = id('save').dataset.edit;
+      if(editId){
+        const s = servers.find(x=>x.id===editId);
+        if(s){ s.name=name; s.addr=addr; s.user=user; s.pass=pass; }
+      }else{
+        servers.push({ id: 'srv_'+Date.now().toString(36), name, addr, user, pass, status:'down' });
+      }
+      save(); render(id('filter').value); closeModal();
+    }
+
+    /* ===== Import/Export UI ===== */
+    id('importBtn').addEventListener('click', ()=>{ id('ioModal').classList.add('open'); });
+    id('ioCancel').addEventListener('click', ()=>{ id('ioModal').classList.remove('open'); });
+    id('doExport').addEventListener('click', ()=>{ id('ioArea').value = JSON.stringify(servers, null, 2); });
+    id('doImport').addEventListener('click', ()=>{
+      try{
+        const data = JSON.parse(id('ioArea').value);
+        if(!Array.isArray(data)) throw new Error('Неверный формат');
+        // basic validation
+        data.forEach(d=>{ if(!d.id) d.id = 'srv_'+Date.now().toString(36); });
+        servers = data; save(); render(id('filter').value); id('ioModal').classList.remove('open');
+      }catch(e){ alert('Ошибка при импорте: '+e.message); }
+    });
+
+    /* ===== Bulk actions ===== */
+    id('pingAll').addEventListener('click', async ()=>{
+      for(const s of servers){
+        const res = await pingServer(s, 2500);
+        updateStatus(s.id, res.ok? 'up' : 'down');
+      }
+      alert('Проверка завершена');
+    });
+    id('refreshList').addEventListener('click', ()=>render(id('filter').value));
+
+    id('filter').addEventListener('input', e=>render(e.target.value));
+
+    // initial demo servers (if none)
+    if(servers.length===0){
+      servers.push({id:'srv_demo1',name:'Входная зона',addr:'http://192.168.1.10:8080',user:'admin',pass:'pass',status:'up'});
+      servers.push({id:'srv_demo2',name:'Стоянка',addr:'http://192.168.1.11',user:'user',pass:'1234',status:'down'});
+      save();
+    }
+
+    render();
+
+    // expose for debug
+    window.__SV = {servers, save, load, pingServer, performPowerAction};
+  </script>
+</body>
+</html>

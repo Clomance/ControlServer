@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Сервер вещания</title>
+        <style>
+            .non-display {
+                display: none;
+            }
+
+            :root {
+                font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+                line-height: 1.5
+            }
+
+            body {
+                max-width: 960px;
+                margin: 20px auto;
+                padding: 16px;
+                background: #f7f8fc;
+                color: #111
+            }
+
+            h1 {
+                margin-bottom: 8px
+            }
+
+            h2 {
+                margin-top: 20px;
+                margin-bottom: 8px;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 4px
+            }
+
+            .card {
+                background: #fff;
+                padding: 14px 18px;
+                border-radius: 10px;
+                box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+                margin-bottom: 12px
+            }
+
+            .controls {
+                display: flex;
+                gap: 8px;
+                align-items: center
+            }
+
+            button {
+                padding: 6px 10px;
+                border: 1px solid #d0d5dd;
+                border-radius: 6px;
+                background: #f5f6fa;
+                cursor: pointer
+            }
+
+            button.primary {
+                background: #2563eb;
+                color: #fff;
+                border: none
+            }
+
+            button.danger {
+                color: #b91c1c;
+                border-color: #fbcaca
+            }
+
+            ul {
+                list-style: none;
+                padding: 0;
+                margin: 0
+            }
+
+            li {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 6px 0;
+                border-bottom: 1px solid #eee
+            }
+
+            .small {
+                font-size: 12px;
+                color: #666
+            }
+
+            audio {
+                margin-top: 6px;
+                width: 100%
+            }
+        </style>
+    </head>
+
+    <body>
+        <audio class="non-display" id="AudioPlayer" controls preload="none"></audio>
+
+        <h1>Сервер вещания - Консоль</h1>
+        <div class="card">
+            <h2>Филиал Дёмский</h2>
+            <div>Текущий трек: <span id="nowPlaying">—</span></div>
+            <button id="current_track_stop">❚❚</button>
+            <button id="current_track_play">▶</button>
+            <button id="current_track_play_next">⏭</button>
+        </div>
+
+        <div class="card">
+            <h2>Музыка</h2>
+            <div class="controls" style="margin-top:10px">
+                <button id="refreshMusic">🔄 Обновить</button>
+                <button id="toggleUploadMusic">⬆️ Загрузить</button>
+            </div>
+            <div id="uploadMusic" style="display:none;margin-top:8px">
+                <input type="file" id="musicFiles" multiple accept="audio/*" />
+                <button id="doUploadMusic" class="primary">Загрузить</button>
+                <button id="cancelUploadMusic">Отмена</button>
+                <div class="small" id="resultMusic"></div>
+            </div>
+            <ul id="listMusic"></ul>
+        </div>
+
+        <div class="card">
+            <h2>Реклама</h2>
+            <div class="controls" style="margin-top:10px">
+                <button id="refreshAds">🔄 Обновить</button>
+                <button id="toggleUploadAds">⬆️ Загрузить</button>
+            </div>
+            <div id="uploadAds" style="display:none;margin-top:8px">
+                <input type="file" id="adFiles" multiple accept="audio/*" />
+                <button id="doUploadAds" class="primary">Загрузить</button>
+                <button id="cancelUploadAds">Отмена</button>
+                <div class="small" id="resultAds"></div>
+            </div>
+            <ul id="listAds"></ul>
+        </div>
+
+        <script>
+            class ServerCurrentTrack {
+                constructor(element) {
+                    this.titleViewElement = element;
+                }
+
+                requestCurrentTrack() {
+                    try {
+                        fetch("/current", { method: 'GET' })
+                            .then(function(response) { return response.json(); })
+                            .then(function(data) {
+                                console.log(data);
+                                nowPlaying.innerHTML = data.current;
+                            });
+                    }
+                    catch (e) {}
+                }
+
+                changeTrackState(state) {
+                    try {
+                        fetch("/state/" + state, { method: 'GET' })
+                    }
+                    catch (e) {}
+                }
+
+                setUpdates(interval) {
+                    setInterval(this.requestCurrentTrack, 5000);
+                }
+            }
+
+            const serverCurrentTrack = new ServerCurrentTrack(
+                document.getElementById('nowPlaying')
+            );
+
+
+            const audioPlayer = document.getElementById('AudioPlayer');
+
+            const listMusic = document.getElementById('listMusic');
+            const listAds = document.getElementById('listAds');
+
+            let musicList = [];
+            let adsList = [];
+            let currentMusicIndex = 0;
+            let isPlayingAd = false;
+
+            function api(path, opts = {}) {
+                return fetch(path, opts).then(async r => {
+                    if (!r.ok) throw new Error(await r.text());
+                    const ct = r.headers.get('content-type') || '';
+                    if (ct.includes('json')) return r.json();
+                    return r.text();
+                });
+            }
+
+
+            function renderList(el, list, prefix, type) {
+                el.innerHTML = '';
+                if (!list.length) {
+                    el.innerHTML = '<li class="small">Нет треков</li>';
+                    return;
+                }
+                list.forEach(n => {
+                    const li = document.createElement('li');
+
+                    const name = document.createElement('span');
+                    name.textContent = n;
+
+                    const controls = document.createElement('div');
+                    controls.className = 'controls';
+
+                    const playBtn = document.createElement('button');
+                    playBtn.textContent = '▶';
+                    playBtn.onclick = () => playTrack(prefix + '/' + encodeURIComponent(n));
+
+                    const stopBtn = document.createElement('button');
+                    stopBtn.textContent = '❚❚';
+                    stopBtn.onclick = () => stopTrack();
+
+                    const delBtn = document.createElement('button');
+                    delBtn.textContent = '🗑';
+                    delBtn.className = 'danger';
+                    delBtn.onclick = () => deleteTrack(n, type);
+                    controls.append(playBtn, stopBtn, delBtn);
+                    li.append(name, controls);
+                    el.append(li);
+                });
+            }
+
+            async function deleteTrack(name, type) {
+                if (!confirm('Удалить ' + name + '?')) return;
+                try {
+                    if (type === 'music')
+                        await api('/tracks/' + encodeURIComponent(name), { method: 'DELETE' });
+                    else
+                        await api('/ads/' + encodeURIComponent(name), { method: 'DELETE' });
+
+                    if (type === 'music') loadMusic();
+                    else loadAds();
+                } catch (e) {
+                    alert('Ошибка удаления: ' + e.message);
+                }
+            }
+
+            async function loadMusic() {
+                try {
+                    const data = await api('/tracks');
+                    musicList = data.tracks || [];
+                    renderList(listMusic, musicList, '/files', 'music');
+                } catch (e) {
+                    listMusic.innerHTML = '<li>' + escapeHtml(e.message) + '</li>';
+                }
+            }
+
+            async function loadAds() {
+                try {
+                    const data = await api('/ads');
+                    adsList = data.tracks || [];
+                    renderList(listAds, adsList, '/ads_files', 'ads');
+                } catch (e) {
+                    listAds.innerHTML = '<li>' + escapeHtml(e.message) + '</li>';
+                }
+            }
+
+            function playTrack(path) {
+                audioPlayer.src = path;
+                audioPlayer.play();
+            }
+
+            function stopTrack() {
+                audioPlayer.pause();
+            }
+
+            async function upload_tracks(playlist, files) {
+                const formData = new FormData();
+                for (let f of files) formData.append('file-' + f.name, f, f.name);
+
+                try {
+                    let r = await fetch('/upload/' + playlist, {method: "POST", body: formData});
+                }
+                catch (e) {
+                }
+            }
+
+
+            document.getElementById('refreshMusic').onclick = loadMusic;
+            document.getElementById('refreshAds').onclick = loadAds;
+
+            const current_track_stop = document.getElementById('current_track_stop');
+            const current_track_play = document.getElementById('current_track_play');
+            const current_track_play_next = document.getElementById('current_track_play_next');
+
+            // Upload handlers
+            const toggleUploadMusic = document.getElementById('toggleUploadMusic');
+            const uploadMusic = document.getElementById('uploadMusic');
+            const doUploadMusic = document.getElementById('doUploadMusic');
+            const cancelUploadMusic = document.getElementById('cancelUploadMusic');
+            const musicFiles = document.getElementById('musicFiles');
+            const resultMusic = document.getElementById('resultMusic');
+
+            const toggleUploadAds = document.getElementById('toggleUploadAds');
+            const uploadAds = document.getElementById('uploadAds');
+            const doUploadAds = document.getElementById('doUploadAds');
+            const cancelUploadAds = document.getElementById('cancelUploadAds');
+            const adFiles = document.getElementById('adFiles');
+            const resultAds = document.getElementById('resultAds');
+
+            toggleUploadMusic.onclick = () => uploadMusic.style.display = uploadMusic.style.display === 'none' ? 'block' : 'none';
+            cancelUploadMusic.onclick = () => uploadMusic.style.display = 'none';
+            toggleUploadAds.onclick = () => uploadAds.style.display = uploadAds.style.display === 'none' ? 'block' : 'none';
+            cancelUploadAds.onclick = () => uploadAds.style.display = 'none';
+
+            current_track_stop .onclick = () => {
+                serverCurrentTrack.changeTrackState("pause");
+            };
+
+            current_track_play .onclick = () => {
+                serverCurrentTrack.changeTrackState("play");
+            };
+
+            current_track_play_next .onclick = () => {
+                serverCurrentTrack.changeTrackState("playnext");
+            };
+
+            doUploadMusic.onclick = async () => {
+                if (!musicFiles.files.length) return alert('Выберите файлы');
+                resultMusic.textContent = 'Загрузка...';
+
+                await upload_tracks("Музыка", musicFiles.files);
+                resultMusic.textContent = 'Сохранено';
+
+                loadMusic();
+            };
+
+            doUploadAds.onclick = async () => {
+                if (!adFiles.files.length) return alert('Выберите файлы');
+
+                // upload_tracks("Реклама", musicFiles);
+
+                const fd = new FormData();
+                for (let f of adFiles.files) fd.append('file', f, f.name);
+                resultAds.textContent = 'Загрузка...';
+                try {
+                    const d = await api('/ads/upload', { method: 'POST', body: fd });
+                    resultAds.textContent = 'Сохранены: ' + (d.saved || []).join(', ');
+                    loadAds();
+                } catch (e) { resultAds.textContent = e.message; }
+            };
+
+            loadMusic();
+            loadAds();
+
+            serverCurrentTrack.requestCurrentTrack();
+            serverCurrentTrack.setUpdates(5000);
+        </script>
+    </body>
+</html>

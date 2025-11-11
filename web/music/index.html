@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Music Console</title>
+<style>
+  /* --- Минималистичная светлая тема --- */
+  :root{
+    --bg: #fbfcfd;
+    --card: #ffffff;
+    --muted: #6b7280;
+    --accent: #0f766e;
+    --accent-2: #064e3b;
+    --border: #e6edf0;
+    --shadow: 0 6px 18px rgba(15,23,42,0.06);
+    --radius: 12px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background:linear-gradient(180deg,#f7fbfc 0%,var(--bg) 100%);
+    color:#0f172a;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding:20px;
+  }
+
+  .app{
+    max-width:1100px;
+    margin:0 auto;
+    display:grid;
+    gap:20px;
+    grid-template-columns: 360px 1fr;
+  }
+
+  /* мобильный */
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr; padding:12px}
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    border:1px solid var(--border);
+    padding:16px;
+  }
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom:8px;
+  }
+  header h1{font-size:18px;margin:0}
+  header .sub{color:var(--muted);font-size:13px}
+
+  /* left column */
+  .playlists{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .playlist-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:10px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:background .12s;
+  }
+  .playlist-item:hover{background:#f4fbfa}
+  .playlist-item.active{background:linear-gradient(90deg,#f0fdf4,#ffffff)}
+
+  .small{font-size:13px;color:var(--muted)}
+
+  /* right column */
+  .controls{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+  }
+  .control-btn{
+    background:var(--card);
+    border:1px solid var(--border);
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+    box-shadow: none;
+  }
+  .control-btn.primary{
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    color:white;
+    border: none;
+  }
+
+  .section{
+    margin-bottom:14px;
+  }
+
+  .tracks{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .track{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px;
+    border-radius:8px;
+    border:1px dashed transparent;
+  }
+  .track:hover{background:#fcfdfd}
+  .track .meta{display:flex; gap:12px; align-items:center}
+  .track .name{font-weight:600}
+  .muted{color:var(--muted); font-size:13px}
+
+  .row{display:flex; gap:10px; align-items:center}
+  .grow{flex:1}
+
+  input[type="text"], select {
+    padding:8px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:transparent;
+  }
+
+  label.small{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+
+  .vol-slider{
+    -webkit-appearance:none;
+    width:160px;
+    height:6px;
+    border-radius:6px;
+    background:linear-gradient(90deg,#e6f7f4,#f1f9f8);
+    outline:none;
+  }
+
+  .muted-btn{
+    background:transparent;border:1px solid var(--border);padding:6px;border-radius:8px;cursor:pointer
+  }
+
+  .footer-small{font-size:12px;color:var(--muted);margin-top:8px}
+  .inline-actions{display:flex; gap:8px; align-items:center}
+
+  /* responsive tweaks */
+  @media (max-width:600px){
+    .control-btn{flex:1}
+    .vol-slider{width:120px}
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT: Playlists -->
+    <div>
+      <div class="card">
+        <header>
+          <div>
+            <h1>Плейлисты</h1>
+            <div class="sub">Управление плейлистами и их громкостью</div>
+          </div>
+        </header>
+
+        <div class="section">
+          <div style="display:flex;gap:8px">
+            <input id="newPlaylistName" type="text" placeholder="Новый плейлист (имя)" />
+            <button id="createPlaylistBtn" class="control-btn">Создать</button>
+          </div>
+        </div>
+
+        <div class="section small">Список плейлистов</div>
+        <div id="playlists" class="playlists small"></div>
+
+        <div class="section" style="margin-top:12px">
+          <div class="small">Глобальная громкость</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+            <input id="globalVol" class="vol-slider" type="range" min="0" max="100" />
+            <div id="globalVolVal" class="muted">—</div>
+          </div>
+        </div>
+
+        <div class="footer-small">Статус сервера: <span id="serverStatus">проверяется...</span></div>
+      </div>
+
+      <!-- Mobile: current track quick -->
+      <div style="height:12px"></div>
+      <div class="card" id="mobileCurrent" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="muted small">Сейчас играет</div>
+            <div id="mobileNow" style="font-weight:700">—</div>
+          </div>
+          <div class="inline-actions">
+            <button id="mobilePlayPause" class="control-btn">▶/⏸</button>
+            <button id="mobileNext" class="control-btn">След.</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Player / Tracks -->
+    <div>
+      <div class="card">
+        <header>
+          <div>
+            <h1>Консоль воспроизведения</h1>
+            <div class="sub">Текущий трек, управление и прослушивание</div>
+          </div>
+          <div style="text-align:right">
+            <div class="muted small">Текущее: <span id="currentTrack">—</span></div>
+            <div class="muted small">Источник: <span id="currentSource">—</span></div>
+          </div>
+        </header>
+
+        <div class="controls">
+          <button id="playPauseBtn" class="control-btn primary">Play / Pause</button>
+          <button id="nextBtn" class="control-btn">Следующий</button>
+
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="small">Прослушать в браузере</div>
+            <audio id="audio" controls preload="none" style="max-width:320px"></audio>
+          </div>
+
+          <div style="margin-left:auto;text-align:right">
+            <div class="muted small">Авто-обновление</div>
+            <div class="small"><input id="autoRefresh" type="checkbox" checked /> Обновлять каждые 5s</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <div style="min-width:220px">
+              <label class="small">Выбранный плейлист</label>
+              <select id="playlistSelect"></select>
+            </div>
+
+            <div style="min-width:220px">
+              <label class="small">Добавить трек (файл)</label>
+              <div style="display:flex;gap:8px">
+                <input id="trackFile" type="file" />
+                <button id="uploadTrackBtn" class="control-btn">Загрузить</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="small">Удалить плейлист</label>
+              <div style="display:flex;gap:8px">
+                <input id="delPlaylistName" type="text" placeholder="Имя плейлиста" />
+                <button id="deletePlaylistBtn" class="control-btn">Удалить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="small">Треки плейлиста: <strong id="selectedPlaylistName">—</strong></div>
+            </div>
+            <div class="small">Громкость плейлиста: <span id="playlistVolVal">—</span></div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+            <input id="playlistVol" class="vol-slider" type="range" min="0" max="100" style="width:260px" />
+            <button id="refreshPlaylistBtn" class="control-btn">Обновить</button>
+          </div>
+
+          <div style="height:12px"></div>
+          <div id="tracks" class="tracks"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Клиентская логика:
+  - периодически обновляет список плейлистов и текущий трек
+  - позволяет: play/pause/next, создать/удалить плейлист, загрузить/удалить трек,
+    управлять глобальной/плейлистовой/трековой громкостью (0..100 -> 0..1),
+    проигрывать треки через <audio> с src = /records/{playlist}/{track}
+*/
+
+const API_ROOT = ""; // пусто => тот же origin. Если сервер на другом хосте — замените на полный путь.
+
+function api(path, opts){
+  return fetch(API_ROOT + path, opts).then(async r => {
+    if (!r.ok) {
+      const txt = await r.text().catch(()=>"");
+      throw new Error(r.status + " " + (txt || r.statusText));
+    }
+    // try json, otherwise return text
+    const ct = r.headers.get("content-type")||"";
+    if (ct.includes("application/json")) return r.json();
+    return r.text();
+  });
+}
+
+/* --- UI references --- */
+const playlistsEl = document.getElementById("playlists");
+const playlistSelect = document.getElementById("playlistSelect");
+const selectedPlaylistNameEl = document.getElementById("selectedPlaylistName");
+const tracksEl = document.getElementById("tracks");
+const audioEl = document.getElementById("audio");
+const currentTrackEl = document.getElementById("currentTrack");
+const currentSourceEl = document.getElementById("currentSource");
+const serverStatusEl = document.getElementById("serverStatus");
+
+const globalVolSlider = document.getElementById("globalVol");
+const globalVolVal = document.getElementById("globalVolVal");
+
+const playlistVolSlider = document.getElementById("playlistVol");
+const playlistVolVal = document.getElementById("playlistVolVal");
+
+const createPlaylistBtn = document.getElementById("createPlaylistBtn");
+const newPlaylistNameInput = document.getElementById("newPlaylistName");
+const deletePlaylistBtn = document.getElementById("deletePlaylistBtn");
+const delPlaylistNameInput = document.getElementById("delPlaylistName");
+const uploadTrackBtn = document.getElementById("uploadTrackBtn");
+const trackFileInput = document.getElementById("trackFile");
+
+const playPauseBtn = document.getElementById("playPauseBtn");
+const nextBtn = document.getElementById("nextBtn");
+const mobilePlayPause = document.getElementById("mobilePlayPause");
+const mobileNext = document.getElementById("mobileNext");
+const mobileCurrentCard = document.getElementById("mobileCurrent");
+const mobileNow = document.getElementById("mobileNow");
+
+const autoRefreshCheckbox = document.getElementById("autoRefresh");
+const refreshPlaylistBtn = document.getElementById("refreshPlaylistBtn");
+const audioContainer = audioEl;
+
+/* state */
+let playlists = [];
+let selectedPlaylist = null;
+let playlistData = {}; // playlist -> { volume, tracks: [] }
+let currentTrack = null;
+
+/* --- helpers --- */
+function v100To01(v){ return Math.max(0, Math.min(100, Number(v)))/100; }
+function v01To100(v){ return Math.round(Number(v)*100); }
+
+function safeNameForPath(name){
+  return encodeURIComponent(name);
+}
+
+/* --- fetchers --- */
+
+async function fetchServerStatus(){
+  try{
+    // simple request to playlists
+    await api('/audio_player/playlists');
+    serverStatusEl.textContent = 'онлайн';
+    serverStatusEl.style.color = '';
+  }catch(e){
+    serverStatusEl.textContent = 'ошибка ('+e.message+')';
+    serverStatusEl.style.color = 'crimson';
+  }
+}
+
+async function loadPlaylists(){
+  try{
+    const data = await api('/audio_player/playlists');
+    playlists = data.playlists || [];
+    renderPlaylists();
+    populatePlaylistSelect();
+  }catch(e){
+    console.error("Не удалось загрузить плейлисты:", e);
+  }
+}
+
+async function loadPlaylist(name){
+  if(!name) return;
+  try{
+    const data = await api('/audio_player/playlist/' + safeNameForPath(name));
+    playlistData[name] = data;
+    selectedPlaylist = name;
+    renderSelectedPlaylist();
+  }catch(e){
+    console.error("Ошибка загрузки плейлиста", e);
+    // если 404 — удалить из списков
+  }
+}
+
+async function loadCurrentTrack(){
+  try{
+    const data = await api('/audio_player/current');
+    currentTrack = data.track || null;
+    renderCurrentTrack();
+  }catch(e){
+    console.error("Ошибка current:", e);
+  }
+}
+
+async function loadGlobalVolume(){
+  try{
+    const data = await api('/audio_player/volume');
+    const v = Number(data.volume || 1);
+    globalVolSlider.value = v01To100(v);
+    globalVolVal.textContent = Math.round(v*100) + '%';
+  }catch(e){
+    console.error("Ошибка global volume", e);
+  }
+}
+
+/* --- render --- */
+
+function renderPlaylists(){
+  playlistsEl.innerHTML = "";
+  playlists.forEach(p=>{
+    const div = document.createElement('div');
+    div.className = 'playlist-item' + (p===selectedPlaylist ? ' active' : '');
+    div.innerHTML = `<div style="display:flex;flex-direction:column">
+                      <div style="font-weight:700">${p}</div>
+                      <div class="muted small">tracks: <span data-count>—</span></div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                      <button title="Play playlist" class="control-btn" data-play>▶</button>
+                      <button title="Delete playlist" class="control-btn" data-delete>🗑</button>
+                    </div>`;
+    div.querySelector('[data-play]').onclick = ()=> {
+      // make this playlist selected and load it
+      playlistSelect.value = p;
+      loadPlaylist(p);
+      // also attempt to set audio src to first track
+      const pd = playlistData[p];
+      if(pd && pd.tracks && pd.tracks.length>0){
+        playTrack(p, pd.tracks[0]);
+      }
+    };
+    div.querySelector('[data-delete]').onclick = async ()=>{
+      if(!confirm('Удалить плейлист "'+p+'"?')) return;
+      try{
+        await api('/audio_player/playlist/' + safeNameForPath(p), { method: 'DELETE' });
+        await loadPlaylists();
+        if(selectedPlaylist===p){
+          selectedPlaylist = null;
+          tracksEl.innerHTML = '';
+          selectedPlaylistNameEl.textContent = '—';
+        }
+      }catch(e){ alert('Ошибка удаления: '+e.message) }
+    };
+
+    const countEl = div.querySelector('[data-count]');
+    const pd = playlistData[p];
+    countEl.textContent = (pd && pd.tracks ? pd.tracks.length : '—');
+    div.onclick = (e)=> {
+      // click on item (not on buttons)
+      if(e.target.tagName.toLowerCase()==='button') return;
+      playlistSelect.value = p;
+      loadPlaylist(p);
+    };
+    playlistsEl.appendChild(div);
+  });
+}
+
+function populatePlaylistSelect(){
+  playlistSelect.innerHTML = '';
+  const optEmpty = document.createElement('option');
+  optEmpty.value = '';
+  optEmpty.textContent = '— выбрать —';
+  playlistSelect.appendChild(optEmpty);
+  playlists.forEach(p=>{
+    const o = document.createElement('option');
+    o.value = p;
+    o.textContent = p;
+    playlistSelect.appendChild(o);
+  });
+}
+
+function renderSelectedPlaylist(){
+  const name = selectedPlaylist;
+  selectedPlaylistNameEl.textContent = name || '—';
+  tracksEl.innerHTML = '';
+  if(!name) return;
+  const pd = playlistData[name];
+  if(!pd) return;
+  playlistVolSlider.value = v01To100(pd.volume || 1);
+  playlistVolVal.textContent = Math.round((pd.volume||1)*100) + '%';
+  pd.tracks.forEach(t=>{
+    const tr = document.createElement('div');
+    tr.className = 'track';
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.innerHTML = `<div style="width:10px;height:10px;border-radius:50%;background:#d1fae5"></div>
+                      <div>
+                        <div class="name">${t}</div>
+                        <div class="muted small">playlist: ${name}</div>
+                      </div>`;
+    const actions = document.createElement('div');
+    actions.style.display='flex';
+    actions.style.gap='8px';
+    // play in browser
+    const playBtn = document.createElement('button');
+    playBtn.className='control-btn';
+    playBtn.textContent='▶';
+    playBtn.onclick = ()=> playTrack(name, t);
+    // remove track
+    const delBtn = document.createElement('button');
+    delBtn.className='control-btn';
+    delBtn.textContent='Удалить';
+    delBtn.onclick = async ()=> {
+      if(!confirm('Удалить трек "'+t+'" из "'+name+'"?')) return;
+      try{
+        await api('/audio_player/playlist/'+safeNameForPath(name)+'/track/'+safeNameForPath(t), { method: 'DELETE' });
+        await loadPlaylist(name);
+        await loadPlaylists();
+      }catch(e){ alert('Ошибка удаления трека: '+e.message) }
+    };
+    // track volume control
+    const vol = document.createElement('input');
+    vol.type='range'; vol.min=0; vol.max=100; vol.value=100;
+    vol.title='Громкость трека';
+    vol.oninput = debounce(async ()=>{
+      const v = v100To01(vol.value);
+      try{
+        await api('/audio_player/playlist/'+safeNameForPath(name)+'/track/'+safeNameForPath(t)+'/volume/'+encodeURIComponent(String(v)), { method: 'POST' });
+      }catch(e){
+        console.error('track vol error', e);
+      }
+    }, 300);
+    actions.appendChild(playBtn);
+    actions.appendChild(vol);
+    actions.appendChild(delBtn);
+
+    tr.appendChild(meta);
+    tr.appendChild(actions);
+    tracksEl.appendChild(tr);
+  });
+}
+
+/* --- actions --- */
+
+async function createPlaylist(){
+  const name = newPlaylistNameInput.value.trim();
+  if(!name) { alert('Введите имя плейлиста'); return; }
+  try{
+    // server's POST /audio_player/playlist/{playlist} is placeholder but call it anyway
+    await api('/audio_player/playlist/'+safeNameForPath(name), { method: 'POST' });
+    newPlaylistNameInput.value = '';
+    await loadPlaylists();
+  }catch(e){ alert('Ошибка создания: '+e.message) }
+}
+
+async function deletePlaylist(){
+  const name = delPlaylistNameInput.value.trim();
+  if(!name){ alert('Введите имя плейлиста для удаления'); return; }
+  if(!confirm('Удалить плейлист "'+name+'"?')) return;
+  try{
+    await api('/audio_player/playlist/'+safeNameForPath(name), { method: 'DELETE' });
+    delPlaylistNameInput.value='';
+    await loadPlaylists();
+    if(selectedPlaylist===name){ selectedPlaylist=null; tracksEl.innerHTML=''; selectedPlaylistNameEl.textContent='—'}
+  }catch(e){ alert('Ошибка удаления: '+e.message) }
+}
+
+async function uploadTrack(){
+  const file = trackFileInput.files[0];
+  const playlist = playlistSelect.value;
+  if(!file){ alert('Выберите файл'); return; }
+  if(!playlist){ alert('Выберите плейлист куда загружать'); return; }
+
+  // POST multipart to /audio_player/playlist/{playlist}/track/{track}
+  // используем имя файла как {track}
+  const trackName = file.name;
+  const fd = new FormData();
+  fd.append('file', file, file.name);
+  try{
+    await fetch(API_ROOT + '/audio_player/playlist/' + safeNameForPath(playlist) + '/track/' + safeNameForPath(trackName), {
+      method: 'POST',
+      body: fd
+    }).then(r=>{
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+    });
+    // обновим список
+    await loadPlaylist(playlist);
+    await loadPlaylists();
+    trackFileInput.value = '';
+  }catch(e){ alert('Ошибка загрузки: '+e.message) }
+}
+
+async function playTrack(playlist, track){
+  // set audio src to /records/{playlist}/{track}
+  const src = '/records/' + safeNameForPath(playlist) + '/' + safeNameForPath(track);
+  audioEl.src = src;
+  audioEl.play().catch(e=>console.warn("play failed:",e));
+  // also notify server? not required by current API; current player on server is independent.
+  currentSourceEl.textContent = `${playlist} / ${track}`;
+  currentTrackEl.textContent = `${track} (${playlist})`;
+}
+
+async function playPause(){
+  // Toggle via server endpoint? server supports actions: play, pause
+  // We call 'play' to unpause and 'pause' to pause.
+  // But we don't know playback state; just call /current/action/pause or /play depending on audio.paused
+  try{
+    // If audio is paused — ask server to play (unpause)
+    const action = audioEl.paused ? 'play' : 'pause';
+    await api('/audio_player/current/action/' + action, { method: 'POST' });
+    // also toggle local audio for preview
+    if(audioEl.src) {
+      if(audioEl.paused) audioEl.play().catch(()=>{});
+      else audioEl.pause();
+    }
+  }catch(e){ console.error('playPause err', e); }
+}
+
+async function nextTrack(){
+  try{
+    await api('/audio_player/current/action/playnext', { method: 'POST' });
+  }catch(e){ console.error('next err', e); }
+}
+
+async function setGlobalVolume(v){
+  try{
+    await api('/audio_player/volume/' + encodeURIComponent(String(v)), { method: 'POST' });
+  }catch(e){ console.error("set global vol err", e); }
+}
+
+async function setPlaylistVolume(playlist, v){
+  try{
+    await api('/audio_player/playlist/' + safeNameForPath(playlist) + '/volume/' + encodeURIComponent(String(v)), { method: 'POST' });
+  }catch(e){ console.error("set playlist vol err", e); }
+}
+
+/* --- UI wiring --- */
+
+createPlaylistBtn.onclick = createPlaylist;
+deletePlaylistBtn.onclick = deletePlaylist;
+uploadTrackBtn.onclick = uploadTrack;
+refreshPlaylistBtn.onclick = ()=>{ if(playlistSelect.value) loadPlaylist(playlistSelect.value) };
+
+playlistSelect.onchange = ()=>{
+  const v = playlistSelect.value;
+  if(v) loadPlaylist(v);
+};
+
+playPauseBtn.onclick = playPause;
+nextBtn.onclick = nextTrack;
+mobilePlayPause && (mobilePlayPause.onclick = playPause);
+mobileNext && (mobileNext.onclick = nextTrack);
+
+globalVolSlider.oninput = debounce(()=>{
+  const v = v100To01(globalVolSlider.value);
+  globalVolVal.textContent = Math.round(v*100) + '%';
+  setGlobalVolume(v).catch(()=>{});
+}, 150);
+
+playlistVolSlider.oninput = debounce(()=>{
+  const v = v100To01(playlistVolSlider.value);
+  playlistVolVal.textContent = Math.round(v*100) + '%';
+  if(selectedPlaylist) setPlaylistVolume(selectedPlaylist, v);
+}, 150);
+
+/* render current track */
+function renderCurrentTrack(){
+  if(!currentTrack){ currentTrackEl.textContent = '—'; currentSourceEl.textContent = '—'; mobileCurrentCard.style.display='none'; mobileNow.textContent='—'; return; }
+  currentTrackEl.textContent = currentTrack;
+  currentSourceEl.textContent = currentTrack;
+  mobileNow.textContent = currentTrack;
+  mobileCurrentCard.style.display = 'block';
+}
+
+/* --- utilities --- */
+function debounce(fn, wait=200){
+  let t;
+  return function(...args){
+    clearTimeout(t);
+    t = setTimeout(()=>fn.apply(this,args), wait);
+  };
+}
+
+/* --- auto-refresh loop --- */
+let refreshTimer = null;
+async function fullRefresh(){
+  await fetchServerStatus();
+  await loadGlobalVolume();
+  await loadPlaylists();
+  // if selected playlist in select -> load it
+  const sel = playlistSelect.value || selectedPlaylist;
+  if(sel) await loadPlaylist(sel);
+  await loadCurrentTrack();
+}
+
+async function startAutoRefresh(){
+  await fullRefresh();
+  if(autoRefreshCheckbox.checked){
+    refreshTimer = setInterval(async ()=> {
+      try{ await fullRefresh(); } catch(e){}
+    }, 5000);
+  }
+}
+function stopAutoRefresh(){
+  if(refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+}
+autoRefreshCheckbox.onchange = ()=>{
+  if(autoRefreshCheckbox.checked) startAutoRefresh(); else stopAutoRefresh();
+};
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) stopAutoRefresh(); else if(autoRefreshCheckbox.checked) startAutoRefresh();
+});
+
+/* init */
+startAutoRefresh().catch(e=>console.error(e));
+</script>
+</body>
+</html>

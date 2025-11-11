@@ -1,0 +1,23 @@
+[
+    {
+        "id": "music_playlist_01",
+        "name": "Музыка",
+        "directory": "music",
+        "volume": 0.5,
+        "period": 1
+    },
+    {
+        "id": "music_playlist_02",
+        "name": "Реклама",
+        "directory": "advert",
+        "volume": 0.5,
+        "period": 10
+    },
+    {
+        "id": "music_playlist_03",
+        "name": "Чёрная пятница",
+        "directory": "blackfriday",
+        "volume": 0.5,
+        "period": 10
+    }
+]
