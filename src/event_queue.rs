@@ -16,6 +16,19 @@ pub enum Event {
         playlist: String,
         track: String,
         volume: f32
+    },
+    AddPlaylist {
+        id: String,
+        name: String
+    },
+    DeletePlaylist(String),
+    AddTrack {
+        playlist: String,
+        track: String
+    },
+    DeleteTrack {
+        playlist: String,
+        track: String
     }
 }
 

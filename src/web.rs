@@ -87,15 +87,15 @@ pub async fn run_webserver_(
 
         // Плейлисты
         .route("/audio_player/playlists", get(get_playlists))
-        .route("/audio_player/playlist/{playlist}", get(get_playlist))
-        .route("/audio_player/playlist/{playlist}", post(post_playlist))
-        .route("/audio_player/playlist/{playlist}", delete(delete_playlist))
-        .route("/audio_player/playlist/{playlist}/volume/{volume}", post(post_playlist_volume))
+        .route("/audio_player/playlist/{playlist_id}", get(get_playlist))
+        .route("/audio_player/playlist", post(post_playlist))
+        .route("/audio_player/playlist/{playlist_id}", delete(delete_playlist))
+        .route("/audio_player/playlist/{playlist_id}/volume/{volume}", post(post_playlist_volume))
 
         // Треки
-        .route("/audio_player/playlist/{playlist}/track/{track}/volume/{volume}", post(post_track_volume))
-        .route("/audio_player/playlist/{playlist}/track/{track}", post(post_track))
-        .route("/audio_player/playlist/{playlist}/track/{track}", delete(delete_track))
+        .route("/audio_player/playlist/{playlist_id}/track/{track_id}/volume/{volume}", post(post_track_volume))
+        .route("/audio_player/playlist/{playlist_id}/track", post(post_track))
+        .route("/audio_player/playlist/{playlist_id}/track/{track_id}", delete(delete_track))
 
         // static files
         .nest_service("/records", serve_dir)
@@ -110,6 +110,7 @@ pub async fn run_webserver_(
 
     axum::serve(listener, app).await.unwrap();
 }
+
 
 
 async fn index() -> impl IntoResponse {
@@ -192,12 +193,19 @@ async fn get_playlist(Path(playlist): Path<String>, State(state): State<AppState
     ))
 }
 
-async fn post_playlist(Path(playlist): Path<String>, State(state): State<AppState>) -> impl IntoResponse {
-    // Placeholder for future functionality
-    println!("POST playlist: {}", playlist);
+async fn post_playlist(State(state): State<AppState>, multipart: Multipart) -> impl IntoResponse {
+    let mut id = String::new();
+    let mut name = String::new();
+
+    while let Ok(field) = multipart.next_field().await {
+
+    }
     // TODO: Implement playlist modification logic here
 
     let id = gen_id();
+
+    state.event_queue.send(Event::SetPlaylistVolume{ playlist, volume });
+    
     Json(serde_json::json!({ "playlist": id }))
 }
 
@@ -235,7 +243,6 @@ async fn post_track_volume(Path((playlist, track, volume)): Path<(String, String
         volume = 0f32
     }
 
-    // Placeholder for future functionality
     state.event_queue.send(Event::SetTrackVolume{ playlist, track, volume });
 
     Response::builder().status(200).body("".to_string()).unwrap()

@@ -148,6 +148,14 @@ async fn main() {
                     }
                 }
             }
+
+            Event::AddPlaylist(id) => {
+                
+            }
+
+            Event::AddTrack { playlist, track } => {
+                
+            }
         }
     }).await;
 
