@@ -122,9 +122,10 @@ async fn main() {
             }
 
             Event::SetGlobalVolume(volume) => {
+                global_volume = volume;
+
                 if let Some(playlist) = playlists.get(&current_playlist).await {
                     let playlist_lock = playlist.read().await;
-                    global_volume = volume;
 
                     let volume = playlist_lock.volume * volume;
                     audio_player.commander().send(AudioPlayerCommand::Volume(volume));

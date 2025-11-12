@@ -1,11 +1,12 @@
 use axum::{
     Json, Router, extract::{DefaultBodyLimit, Multipart, Path, State}, http::{Method, Response}, response::{Html, IntoResponse}, routing::{delete, get, post}
 };
+use serde::{Deserialize, Serialize};
 use tower_http::{cors::{Any, CorsLayer}, services::ServeDir};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
-use crate::{audio::{AudioPlayerCommand, AudioPlayerCommander}, database::gen_id, event_queue::{Event, EventSender}, playlists::{PlaylistInfo, Playlists}};
+use crate::{TRACKS_DIRECTORY, audio::{AudioPlayerCommand, AudioPlayerCommander}, database::gen_id, event_queue::{Event, EventSender}, playlists::{PlaylistInfo, Playlists}};
 
 
 
@@ -70,7 +71,7 @@ pub async fn run_webserver_(
         .allow_methods([Method::GET, Method::POST, Method::DELETE])
         .allow_headers(Any);
 
-    let serve_dir = ServeDir::new(PathBuf::from("./records"));
+    let serve_dir = ServeDir::new(PathBuf::from(TRACKS_DIRECTORY));
 
     let app = Router::new()
 
@@ -97,7 +98,7 @@ pub async fn run_webserver_(
         .route("/audio_player/playlist/{playlist_id}/track/{track_id}", delete(delete_track))
 
         // static files
-        .nest_service("/records", serve_dir)
+        .nest_service("/audio_player/records", serve_dir)
         .with_state(state)
         .layer(cors)
         .layer(DefaultBodyLimit::disable());
@@ -200,29 +201,17 @@ async fn get_playlist(Path(playlist): Path<String>, State(state): State<AppState
     ))
 }
 
+
+#[derive(Serialize)]
+#[derive(Deserialize)]
+struct PlaylistPayload {
+    name: String
+    // period: u64
+}
 /// 
-async fn post_playlist(State(state): State<AppState>, mut multipart: Multipart) -> impl IntoResponse {
-    let mut name = String::new();
-    let mut period = 0u64;
-
-    while let Ok(Some(field)) = multipart.next_field().await {
-        let field_name = field.name().unwrap_or("").to_string();
-
-        if field_name == "name" {
-            if let Ok(text) = field.text().await {
-                name = text
-            }
-        }
-        else if field_name == "period" {
-            if let Ok(Ok(number)) = field.text().await.map(|n| n.parse::<u64>()) {
-                period = number
-            }
-        }
-    }
-
-    if name.is_empty() {
-        return Json(serde_json::json!({ "playlist": null }))
-    }
+async fn post_playlist(State(state): State<AppState>, Json(payload): Json<PlaylistPayload>) -> impl IntoResponse {
+    let name = payload.name;
+    let period = 0u64;
 
     let id = gen_id();
 
