@@ -13,6 +13,7 @@ const END_TIME: u32 = 23;
 
 pub enum SchedulerCommand {
     AddTask(SchedulerTask),
+    DeleteTask(String),
     Next,
     Stop
 }
@@ -139,6 +140,10 @@ impl SchedulerCommander {
         let _ = self.sender.send(SchedulerCommand::AddTask(task));
     }
 
+    pub fn delete_task(&self, task: String) {
+        let _ = self.sender.send(SchedulerCommand::DeleteTask(task));
+    }
+
     pub fn next(&self) {
         let _ = self.sender.send(SchedulerCommand::Next);
     }
@@ -171,6 +176,8 @@ impl Scheduler {
             while let Ok(command) = receiver.recv() {
                 match command {
                     SchedulerCommand::AddTask(task) => scheduler.add_task(task),
+
+                    SchedulerCommand::DeleteTask(task) => scheduler.remove_task(&task),
 
                     SchedulerCommand::Next =>
                         if let Some(task) = scheduler.next() {

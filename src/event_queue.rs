@@ -24,6 +24,7 @@ pub enum Event {
     },
     DeletePlaylist(String),
     AddTrack {
+        id: String,
         playlist: String,
         name: String,
         file: Vec<u8>

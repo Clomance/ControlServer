@@ -84,18 +84,6 @@ where
         }
     }
 
-    /// Destroys this iterator and returns the underlying iterator.
-    #[inline]
-    pub fn into_inner(self) -> I {
-        self.input
-    }
-
-    /// get mutable access to the iterator
-    #[inline]
-    pub fn inner_mut(&mut self) -> &mut I {
-        &mut self.input
-    }
-
     fn next_input_span(&mut self) {
         self.current_span_pos_in_chunk += 1;
 

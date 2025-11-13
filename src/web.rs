@@ -205,7 +205,8 @@ async fn get_playlist(Path(playlist): Path<String>, State(state): State<AppState
 #[derive(Serialize)]
 #[derive(Deserialize)]
 struct PlaylistPayload {
-    name: String
+    name: String,
+    // directory: String,
     // period: u64
 }
 /// 
@@ -292,10 +293,10 @@ async fn post_track(
         return Json(serde_json::json!({ "track": null }))
     }
 
-    state.event_queue.send(Event::AddTrack { playlist, name, file });
-
-    // TODO: Implement track modification logic here
     let id = gen_id();
+
+    state.event_queue.send(Event::AddTrack { id: id.clone(), playlist, name, file });
+
     Json(serde_json::json!({ "track": id }))
 }
 

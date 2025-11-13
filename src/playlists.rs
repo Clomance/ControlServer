@@ -26,6 +26,17 @@ pub struct Track {
     pub path: PathBuf
 }
 
+impl Track {
+    pub fn to_config(&self) -> TrackConfig {
+        TrackConfig {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            playlist: self.playlist.clone(),
+            volume: self.volume
+        }
+    }
+}
+
 
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -96,23 +107,30 @@ impl Playlist {
         self.tracks.get(index).take().map(|f| f.clone())
     }
 
-    pub fn names(&self) -> Vec<String> {
-        let mut names = Vec::new();
+    pub fn set_track_volume(&mut self, track: String, volume: f32) {
+        self.tracks.iter_mut().any(|t| {
+            let find = t.id == track;
 
-        for track in &self.tracks {
-            names.push(track.name.to_string());
-        }
+            if find {
+                t.volume = volume
+            }
 
-        names
+            find
+        });
     }
 
-    pub fn remove(&mut self, id: String) {
-        for c in 0..self.tracks.len() {
-            if self.tracks[c].id == id {
-                self.tracks.remove(c);
-                return
-            }
+    pub fn to_config(&self) -> PlaylistConfig {
+        PlaylistConfig {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            directory: self.directory.to_string_lossy().to_string(),
+            period: self.period,
+            volume: self.volume
         }
+    }
+
+    pub fn get_track_configs(&self) -> Vec<TrackConfig> {
+        self.tracks.iter().map(|t| t.to_config()).collect()
     }
 }
 
@@ -153,10 +171,51 @@ impl Playlists {
         lock.insert(playlist.id.clone(), Arc::new(RwLock::new(playlist)));
     }
 
-    // pub async fn delete(&self, id: &str) {
-    //     let mut lock = self.inner.write().await;
-    //     lock.remove(id);
-    // }
+    pub async fn delete(&self, id: String) {
+        let mut lock = self.inner.write().await;
+        if let Some(playlist) = lock.remove(&id) {
+            let mut path = PathBuf::from(TRACKS_DIRECTORY);
+            path.push(&playlist.read().await.directory);
+            let _ = tokio::fs::remove_dir_all(path).await;
+        }
+    }
+
+    pub async fn add_track(&self, track_id: String, playlist_id: String, name: String, file: Vec<u8>) {
+        if let Some(playlist) = self.get(&playlist_id).await {
+            let mut playlist = playlist.write().await;
+
+            let mut path = PathBuf::from(TRACKS_DIRECTORY);
+            path.push(&playlist.directory);
+            path.push(&name);
+
+            let _ = tokio::fs::write(&path, file).await;
+
+            let track = Track {
+                id: track_id,
+                name,
+                playlist: playlist_id,
+                volume: 0.5,
+                path
+            };
+
+            playlist.tracks.push(track)
+        }
+    }
+
+    pub async fn delete_track(&self, track_id: String, playlist_id: String) {
+        if let Some(playlist) = self.get(&playlist_id).await {
+            let mut playlist = playlist.write().await;
+
+            for c in 0..playlist.tracks.len() {
+                let track = &playlist.tracks[c];
+
+                if track.id == track_id {
+                    let track = playlist.tracks.remove(c);
+                    let _ = tokio::fs::remove_file(track.path).await;
+                }
+            }
+        }
+    }
 
     pub async fn get(&self, id: &str) -> Option<Arc<RwLock<Playlist>>> {
         let lock = self.inner.read().await;

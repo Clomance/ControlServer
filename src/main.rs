@@ -6,7 +6,7 @@ use event_queue::*;
 mod playlists;
 use playlists::*;
 mod web;
-use tokio::{fs::DirBuilder, sync::RwLock};
+use tokio::sync::RwLock;
 use web::*;
 mod scheduler;
 use scheduler::*;
@@ -14,7 +14,7 @@ mod server_config;
 use server_config::*;
 mod database;
 use database::*;
-use std::{path::PathBuf, sync::Arc, thread::sleep, time::Duration};
+use std::{sync::Arc, thread::sleep, time::Duration};
 
 
 
@@ -144,7 +144,9 @@ async fn main() {
 
             Event::SetTrackVolume{ playlist, track, volume} => {
                 if let Some(playlist) = playlists.get(&playlist).await {
-                    let playlist_lock = playlist.read().await;
+                    let mut playlist_lock = playlist.write().await;
+
+                    playlist_lock.set_track_volume(track.clone(), volume);
 
                     if current_track_id == track {
                         let volume = playlist_lock.volume * global_volume * volume;
@@ -154,19 +156,31 @@ async fn main() {
             }
 
             Event::AddPlaylist { id, name, period } => {
-                playlists.add(id, name, period).await
+                playlists.add(id.clone(), name, period).await;
+
+                scheduler.commander().add_task(SchedulerTask::new(&id, period));
+
+                let playlists = playlists.list().await;
+                let configs: Vec<PlaylistConfig> = playlists.iter().map(|p| p.to_config()).collect();
+                let _ = database.playlists.save(&configs).await;
             }
 
             Event::DeletePlaylist(id) => {
-                
+                playlists.delete(id.clone()).await;
+
+                scheduler.commander().delete_task(id);
+
+                let playlists = playlists.list().await;
+                let configs: Vec<PlaylistConfig> = playlists.iter().map(|p| p.to_config()).collect();
+                let _ = database.playlists.save(&configs).await;
             }
 
-            Event::AddTrack { playlist, name, file } => {
-                
+            Event::AddTrack { id, playlist, name, file } => {
+                playlists.add_track(id, playlist, name, file).await
             }
 
             Event::DeleteTrack { playlist, track } => {
-
+                playlists.delete_track(track, playlist).await;
             }
         }
     }).await;

@@ -1,8 +1,4 @@
-// use std::{net::Ipv4Addr, str::FromStr};
-
 use serde_json::Value;
-
-use crate::playlists::PlaylistConfig;
 
 
 
@@ -31,10 +27,7 @@ pub struct Config {
     /// Порт веб-сервера.
     pub web_server_port: u16,
 
-    pub volume: f32,
-
-    /// Плейлисты.
-    pub playlists: Vec<PlaylistConfig>
+    pub volume: f32
 }
 
 impl Config {
@@ -70,38 +63,11 @@ impl Config {
             volume = volume_config as f32
         }
 
-                // Чтение данных плейлистов
-        let mut playlists = Vec::new();
-        if let Some(playlists_config) = config["playlists"].as_array() {
-            for playlist_config in playlists_config {
-                let Some(name) = playlist_config["name"].as_str().map(|s| s.to_string()) else { continue };
-
-                let Some(directory) = playlist_config["directory"].as_str().map(|s| s.to_string()) else { continue };
-
-                let Some(volume) = playlist_config["volume"].as_f64().map(|v| v as f32) else { continue };
-
-                let Some(period) = playlist_config["period"].as_u64() else { continue };
-
-                let playlist = PlaylistConfig {
-                    id: "".to_string(),
-                    name,
-                    directory,
-                    period,
-                    volume
-                };
-
-                playlists.push(playlist)
-            }
-        };
-
-
-
         Ok (
             Self {
                 web_server_address,
                 web_server_port,
-                volume,
-                playlists
+                volume
             }
         )
     }
