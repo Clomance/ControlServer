@@ -4,20 +4,23 @@
         "name": "Музыка",
         "directory": "music",
         "volume": 0.5,
-        "period": 1
+        "period": 1,
+        "enabled": true
     },
     {
         "id": "music_playlist_02",
         "name": "Реклама",
         "directory": "advert",
         "volume": 0.5,
-        "period": 10
+        "period": 10,
+        "enabled": true
     },
     {
         "id": "music_playlist_03",
         "name": "Чёрная пятница",
         "directory": "blackfriday",
         "volume": 0.5,
-        "period": 10
+        "period": 10,
+        "enabled": true
     }
 ]

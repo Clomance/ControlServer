@@ -1,8 +1,5 @@
 {
-    "web_server": {
-        "address": "0.0.0.0",
-        "port": 3000
-    },
-
-    "volume": 0.5
+  "web_server_address": "0.0.0.0",
+  "web_server_port": 3000,
+  "volume": 1.0
 }

@@ -1,8 +1,7 @@
-use std::sync::mpsc::{Receiver, SyncSender};
+use std::{fmt::Display, sync::mpsc::{Receiver, SyncSender}};
 
 
 
-#[derive(Debug)]
 pub enum Event {
     None,
     Next,
@@ -35,6 +34,41 @@ pub enum Event {
     }
 }
 
+impl Display for Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Event::None =>
+                f.write_fmt(format_args!("None")),
+
+            Event::Next =>
+                f.write_fmt(format_args!("Next")),
+
+            Event::PlayTrack(track) =>
+                f.write_fmt(format_args!("PlayTrack({})", track)),
+
+            Event::SetGlobalVolume(volume) =>
+                f.write_fmt(format_args!("SetGlobalVolume({})", volume)),
+
+            Event::SetPlaylistVolume { playlist, volume } =>
+                f.write_fmt(format_args!("SetPlaylistVolume{{ playlist: {}, volume: {} }}", playlist, volume)),
+
+            Event::SetTrackVolume { playlist, track, volume } =>
+                f.write_fmt(format_args!("SetPlaylistVolume{{ playlist: {}, track: {}, volume: {} }}", playlist, track, volume)),
+
+            Event::AddPlaylist { id, name, period } =>
+                f.write_fmt(format_args!("AddPlaylist{{ id: {}, name: {}, period: {} }}", id, name, period)),
+
+            Event::DeletePlaylist(playlist) =>
+                f.write_fmt(format_args!("DeletePlaylist({})", playlist)),
+
+            Event::AddTrack { id, playlist, name, file } =>
+                f.write_fmt(format_args!("AddTrack{{ id: {}, playlist: {}, name: {}, file_size: {} }}", id, playlist, name, file.len())),
+
+            Event::DeleteTrack { playlist, track } =>
+                f.write_fmt(format_args!("DeleteTrack{{ playlist: {}, track: {} }}", playlist, track)),
+        }
+    }
+}
 
 
 #[derive(Clone)]

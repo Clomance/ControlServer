@@ -119,6 +119,20 @@ impl Playlist {
         });
     }
 
+    pub fn get_track_volume(&self, track: String) -> Option<f32> {
+        let mut volume = None;
+        self.tracks.iter().any(|t| {
+            let find = t.id == track;
+
+            if find {
+                volume = Some(t.volume)
+            }
+
+            find
+        });
+        volume
+    }
+
     pub fn to_config(&self) -> PlaylistConfig {
         PlaylistConfig {
             id: self.id.clone(),

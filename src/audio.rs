@@ -401,11 +401,13 @@ impl AudioPlayer {
 
                 audio_player.render(|buffer| {
                     if !pause {
-                        if let Some(sound_object) = sound_object.as_mut() {
-                            sound_object.prepare();
-                            playing = sound_object.render(&mut OutputBuffer::F32(buffer), sound_volume);
+                        if let Some(sound) = sound_object.as_mut() {
+                            sound.prepare();
+                            playing = sound.render(&mut OutputBuffer::F32(buffer), sound_volume);
 
                             if !playing {
+                                sound_object = None;
+                                println!("Track end");
                                 event_queue.send(Event::Next);
                             }
                         }

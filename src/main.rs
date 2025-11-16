@@ -15,7 +15,8 @@ use server_config::*;
 mod database;
 use database::*;
 use std::{sync::Arc, thread::sleep, time::Duration};
-
+mod logger;
+use logger::*;
 
 
 pub static PLAYLISTS_DATABASE_FILE_PATH: &str = "database/playlists.json";
@@ -26,11 +27,11 @@ pub static TRACKS_DIRECTORY: &str = "records";
 
 #[tokio::main]
 async fn main() {
-    println!("The scheduled audio player started!");
+    log!("The scheduled audio player started!");
 
 
     println!("Parsing configs");
-    let config = match Config::load() {
+    let mut config = match Config::load() {
         Ok(config) => config,
         Err(e) => {
             println!("{}", e.text);
@@ -60,8 +61,8 @@ async fn main() {
     let audio_player = AudioPlayer::new(event_sender.clone());
 
     run_webserver(
-        config.web_server_address,
-        config.web_server_port,
+        config.web_server_address.clone(),
+        config.web_server_port.clone(),
         global_volume,
         playlists.clone(),
         current_track.clone(),
@@ -72,7 +73,7 @@ async fn main() {
     println!("Run");
     scheduler.commander().next();
     event_queue.run(async |event| {
-        println!("{event:?}");
+        println!("{event}");
         match event {
             Event::None => {
                 *current_track.write().await = None;
@@ -123,13 +124,18 @@ async fn main() {
 
             Event::SetGlobalVolume(volume) => {
                 global_volume = volume;
+                config.volume = volume;
 
                 if let Some(playlist) = playlists.get(&current_playlist).await {
                     let playlist_lock = playlist.read().await;
 
-                    let volume = playlist_lock.volume * volume;
-                    audio_player.commander().send(AudioPlayerCommand::Volume(volume));
+                    if let Some(track_volume) = playlist_lock.get_track_volume(current_track_id.clone()) {
+                        let volume = playlist_lock.volume * track_volume * global_volume;
+                        audio_player.commander().send(AudioPlayerCommand::Volume(volume));
+                    }
                 }
+
+                config.save().await;
             }
 
             Event::SetPlaylistVolume{ playlist, volume} => {
@@ -139,6 +145,10 @@ async fn main() {
 
                     let volume = playlist_lock.volume * volume;
                     audio_player.commander().send(AudioPlayerCommand::Volume(volume));
+
+                    let playlists = playlists.list().await;
+                    let configs: Vec<PlaylistConfig> = playlists.iter().map(|p| p.to_config()).collect();
+                    let _ = database.playlists.save(&configs).await;
                 }
             }
 

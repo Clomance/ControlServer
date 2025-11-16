@@ -138,7 +138,7 @@ async fn post_current_track_action(Path(action): Path<String>, State(state): Sta
             state.audio_player.send(AudioPlayerCommand::Unpause)
         }
 
-        "playnext" => {
+        "next" => {
             state.event_queue.send(Event::Next)
         }
 
@@ -283,8 +283,11 @@ async fn post_track(
             }
         }
         else if field_name == "file" {
+            if let Some(file_name) = field.file_name() {
+                name = file_name.to_string()
+            }
             if let Ok(data) = field.bytes().await {
-                file = data.to_vec();
+                file = data.to_vec()
             }
         }
     }

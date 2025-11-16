@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1" />
   <title>Консоль управления музыкой</title>
   <style>
     :root{
@@ -10,19 +10,64 @@
       --shadow: 0 6px 18px rgba(14,20,30,0.06);
     }
     *{box-sizing:border-box}
-    body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial; margin:0; color:var(--text); background:linear-gradient(180deg,var(--bg),var(--muted));}
 
-    /* layout for desktop */
-    .app{display:grid; grid-template-columns: 260px 1fr 420px; grid-template-rows: auto 1fr; gap:18px; height:100vh; padding:18px;}
-    header.top{grid-column:1/4; display:flex; align-items:center; gap:18px; padding:14px; background:var(--panel); border-radius:12px; box-shadow:var(--shadow); border:1px solid var(--divider)}
+    body {
+        width: 80%;
 
-    .left{background:var(--panel); border-radius:12px; padding:12px; box-shadow:var(--shadow); border:1px solid var(--divider); overflow:auto}
-    .center{background:transparent; display:flex; align-items:center; justify-content:center}
-    .right{background:var(--panel); border-radius:12px; padding:12px; box-shadow:var(--shadow); border:1px solid var(--divider); overflow:auto}
+        font-family: Inter, ui-sans-serif,system-ui, Segoe UI,Roboto, Helvetica, Arial;
+        margin: auto;
+        color: var(--text);
+        background: linear-gradient(180deg,var(--bg), var(--muted));
+    }
+
+    .app {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        grid-template-rows: auto 1fr;
+        gap: 18px;
+        height: 100vh;
+        padding: 18px;
+    }
+
+    header.top {
+        grid-column: 1/3;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px;
+        background: var(--panel);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--divider)
+    }
+
+    .left {
+        background:var(--panel);
+        border-radius:12px;
+        padding:12px;
+        box-shadow:var(--shadow);
+        border:1px solid var(--divider);
+        overflow:auto
+    }
+
+    .right {
+        background:var(--panel);
+        border-radius:12px;
+        padding:12px;
+        box-shadow:var(--shadow);
+        border:1px solid var(--divider);
+        overflow:auto
+    }
 
     /* top content */
-    .current-track{flex:1}
-    .current-track h3{margin:0 0 6px 0; font-size:18px}
+    .current-track {
+        flex: 1
+    }
+    .current-track h3 {
+        margin: 0 0 6px 0;
+        font-size: 18px
+    }
+
     .controls{display:flex; align-items:center; gap:8px}
     .btn{background:#fff;border:1px solid var(--divider);padding:8px 10px;border-radius:8px; cursor:pointer; min-width:40px}
     .big-btn{padding:10px 14px}
@@ -45,10 +90,22 @@
     .modal{background:#fff;padding:18px;border-radius:12px;min-width:320px}
 
     /* mobile */
-    @media(max-width:900px){
-      .app{grid-template-columns:1fr; grid-template-rows:auto; padding:12px}
-      header.top{grid-column:1/2}
-      .center, .left, .right{width:100%}
+    @media (max-width: 1000px) {
+        body {
+            width: 100%;
+        }
+        .app {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto;
+            padding: 4px
+        }
+        header.top {
+            grid-column: 1/2
+        }
+        .controls {
+            display: block;
+        }
+      .left, .right{width:100%}
       .left, .right{order:0}
       .app > .left{order:1}
       .app > .right{order:2}
@@ -63,18 +120,17 @@
 <body>
   <div class="app">
     <header class="top">
-      <div class="current-track">
+    <div class="current-track">
         <h3 id="currentTitle">Текущий трек — —</h3>
-        <div class="muted small" id="serverStatus">Статус сервера: неизвестен</div>
-      </div>
-      <div class="controls">
-        <button class="btn" id="btnPrev">⏮</button>
-        <button class="btn big-btn" id="btnPlay">⏯</button>
+    </div>
+    <div class="controls">
+        <button class="btn big-btn" id="btnPlay">▶</button>
+        <button class="btn big-btn" id="btnPause">❚❚</button>
         <button class="btn" id="btnNext">⏭</button>
         <div style="width:8px"></div>
         <label class="small muted">Громкость</label>
         <input type="range" id="globalVolume" min="0" max="100" />
-      </div>
+    </div>
     </header>
 
     <aside class="left">
@@ -83,7 +139,6 @@
         <div class="actions">
           <button class="btn" id="btnRefresh">⟳</button>
           <button class="btn" id="btnAddPlaylist">＋</button>
-          <button class="btn" id="btnDeletePlaylist">−</button>
         </div>
       </div>
       <div id="playlists" class="playlist-list">
@@ -105,8 +160,6 @@
 
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
         <button class="btn" id="btnAddTrack">＋</button>
-        <button class="btn" id="btnDeleteTrack">−</button>
-        <div class="muted small">(Добавляйте треки в выбранный плейлист)</div>
       </div>
 
       <div id="tracks" class="tracks"></div>
@@ -142,43 +195,44 @@
 
     // -------------------- State --------------------
     let state = {
-      playlists: [],
-      selectedPlaylistId: null,
-      selectedPlaylist: null,
-      currentTrack: null,
-      globalVolume: 50
+        playlists: [],
+        selectedPlaylistId: null,
+        selectedPlaylist: null,
+        currentTrack: null,
+        globalVolume: 50
     };
 
     // -------------------- Init --------------------
     document.addEventListener('DOMContentLoaded', ()=>{
-      bindUI();
-      refreshAll();
+        bindUI();
+        refreshAll();
+
+        setInterval(fetchCurrent, 5000);
     });
 
     function bindUI(){
-      $('btnRefresh').onclick = refreshPlaylists;
-      $('btnAddPlaylist').onclick = ()=>showCreatePlaylistModal();
-      $('btnDeletePlaylist').onclick = deleteSelectedPlaylist;
-      $('btnAddTrack').onclick = ()=>showAddTrackModal();
-      // fixed: wire delete button to a defined function
-      $('btnDeleteTrack').onclick = deleteSelectedTrack;
+        $('btnRefresh').onclick = refreshPlaylists;
+        $('btnAddPlaylist').onclick = ()=>showCreatePlaylistModal();
+        $('btnAddTrack').onclick = ()=>showAddTrackModal();
+        // fixed: wire delete button to a defined function
+        //   $('btnDeleteTrack').onclick = deleteSelectedTrack;
 
-      $('btnPlay').onclick = ()=>togglePlayPause();
-      $('btnPrev').onclick = ()=>sendCurrentAction('prev');
-      $('btnNext').onclick = ()=>sendCurrentAction('next');
+        $('btnPlay').onclick = ()=>sendCurrentAction('play');
+        $('btnPause').onclick = ()=>sendCurrentAction('pause');
+        $('btnNext').onclick = ()=>sendCurrentAction('next');
 
-      $('globalVolume').oninput = (e)=>{
-        const v = Number(e.target.value);
-        setGlobalVolume(v/100);
-      };
+        $('globalVolume').oninput = (e)=>{
+            const v = Number(e.target.value);
+            setGlobalVolume(v/100);
+        };
 
-      $('playlistVolume').oninput = (e)=>{
-        const v = Number(e.target.value);
-        if(state.selectedPlaylistId) setPlaylistVolume(state.selectedPlaylistId, v/100);
-      };
+        $('playlistVolume').oninput = (e)=>{
+            const v = Number(e.target.value);
+            if(state.selectedPlaylistId) setPlaylistVolume(state.selectedPlaylistId, v/100);
+        };
 
-      // modal close click
-      $('modal').addEventListener('click', (e)=>{ if(e.target === $('modal')) hideModal(); });
+        // modal close click
+        $('modal').addEventListener('click', (e)=>{ if(e.target === $('modal')) hideModal(); });
     }
 
     // -------------------- Server interactions --------------------
@@ -192,15 +246,13 @@
     }
 
     async function fetchCurrent(){
-      try{
-        const data = await api('/audio_player/current');
-        state.currentTrack = data.track || null;
-        $('currentTitle').textContent = state.currentTrack ? ('Текущий трек — ' + state.currentTrack) : 'Текущий трек — —';
-        $('serverStatus').textContent = 'OK';
-      }catch(err){
-        $('serverStatus').textContent = 'Ошибка получения текущего трека';
-        console.error(err);
-      }
+        try{
+            const data = await api('/audio_player/current');
+            state.currentTrack = data.track || null;
+            $('currentTitle').textContent = state.currentTrack ? ('Текущий трек — ' + state.currentTrack) : 'Текущий трек — —';
+        }catch(err){
+            console.error('Ошибка получения текущего трека', err);
+        }
     }
 
     async function sendCurrentAction(action){
@@ -237,55 +289,53 @@
     }
 
     function renderPlaylists(){
-      const wrap = $('playlists'); wrap.innerHTML='';
-      state.playlists.forEach(pl =>{
-        const el = document.createElement('div'); el.className='playlist-item';
-        if(pl.id === state.selectedPlaylistId) el.classList.add('selected');
-        el.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><div><strong>${escapeHtml(pl.name)}</strong></div><div class="muted small">(${pl.tracks_count})</div></div>`;
-        el.onclick = ()=>selectPlaylist(pl.id);
-        wrap.appendChild(el);
-      });
+        const wrap = $('playlists'); wrap.innerHTML='';
+        state.playlists.forEach(pl =>{
+            const el = document.createElement('div'); el.className='playlist-item';
+            if(pl.id === state.selectedPlaylistId) el.classList.add('selected');
+            el.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:2px">
+            <div><strong>${escapeHtml(pl.name)}</strong></div>
+            <div class="muted small">ID: ${escapeHtml(pl.id)}</div>
+            <div class="muted small">Треков: ${escapeHtml(pl.tracks_count)}</div>
+            </div>`;
+            el.onclick = ()=>selectPlaylist(pl.id);
+            wrap.appendChild(el);
+        });
     }
 
     async function selectPlaylist(id){
-      state.selectedPlaylistId = id;
-      // visually mark
-      renderPlaylists();
-      try{
-        const data = await api('/audio_player/playlist/' + encodeURIComponent(id));
-        state.selectedPlaylist = data.playlist;
-        renderSelectedPlaylist();
-      }catch(err){console.error(err); alert('Ошибка загрузки плейлиста: '+err.message)}
+        state.selectedPlaylistId = id;
+        // visually mark
+        renderPlaylists();
+        try{
+            const data = await api('/audio_player/playlist/' + encodeURIComponent(id));
+            state.selectedPlaylist = data.playlist;
+            renderSelectedPlaylist();
+        }
+        catch(err){console.error(err); alert('Ошибка загрузки плейлиста: '+err.message)}
     }
 
     function renderSelectedPlaylist(){
-      const pl = state.selectedPlaylist;
-      if(!pl){ $('playlistName').textContent='—'; $('playlistInfo').textContent='Выберите плейлист'; $('tracks').innerHTML=''; return; }
-      $('playlistName').textContent = pl.name || '—';
-      $('playlistInfo').textContent = `Папка: ${pl.directory || '-'} · Треков: ${ (pl.tracks||[]).length }`;
-      $('playlistVolume').value = Math.round((pl.volume||0.5) * 100);
+        const pl = state.selectedPlaylist;
+        if(!pl){ $('playlistName').textContent='—'; $('playlistInfo').textContent='Выберите плейлист'; $('tracks').innerHTML=''; return; }
+        $('playlistName').textContent = `${pl.name || '—'} (ID: ${pl.id || '-'})`;
+        $('playlistInfo').textContent = `Папка: ${pl.directory || '-'} · Треков: ${(pl.tracks||[]).length} · Период: ${pl.period || '-'} с`;
+        $('playlistVolume').value = Math.round((pl.volume||0.5) * 100);
 
-      const twrap = $('tracks'); twrap.innerHTML='';
-      (pl.tracks||[]).forEach(tr=>{
-        const t = document.createElement('div'); t.className='track';
-        t.innerHTML = `
-          <div class="title"><strong>${escapeHtml(tr.name)}</strong><div class="muted small">id: ${escapeHtml(tr.id)}</div></div>
-          <div class="track-actions">
+
+        const twrap = $('tracks'); twrap.innerHTML='';
+        (pl.tracks||[]).forEach(tr=>{
+            const t = document.createElement('div'); t.className='track';
+            t.innerHTML = `
+            <div class="title"><strong>${escapeHtml(tr.name)}</strong><div class="muted small">id: ${escapeHtml(tr.id)}</div></div>
+            <div class="track-actions">
             <input type="range" max="100" min="0" value="${Math.round((tr.volume||0.5)*100)}" data-trid="${escapeHtml(tr.id)}" />
             <button class="btn" data-play="${escapeHtml(tr.id)}">▶</button>
             <button class="btn" data-delete="${escapeHtml(tr.id)}">🗑</button>
-          </div>
-        `;
-        // attach events
-        t.querySelector('input[type=range]').oninput = (e)=>{
-          const v = Number(e.target.value);
-          setTrackVolume(pl.id, tr.id, v/100);
-        };
-        t.querySelector('[data-play]').onclick = ()=>playTrackInBrowser(pl, tr);
-        t.querySelector('[data-delete]').onclick = ()=>deleteTrack(pl.id, tr.id);
-
-        twrap.appendChild(t);
-      });
+            </div>`;
+            twrap.appendChild(t);
+        });
     }
 
     async function createPlaylist(name){
@@ -296,16 +346,6 @@
         await refreshPlaylists();
         hideModal();
       }catch(err){alert('Ошибка создания плейлиста: '+err.message)}
-    }
-
-    async function deleteSelectedPlaylist(){
-      if(!state.selectedPlaylistId){ alert('Выберите плейлист для удаления'); return; }
-      if(!confirm('Удалить плейлист?')) return;
-      try{
-        await api('/audio_player/playlist/' + encodeURIComponent(state.selectedPlaylistId), {method:'DELETE'});
-        state.selectedPlaylistId = null; state.selectedPlaylist = null;
-        await refreshPlaylists(); renderSelectedPlaylist();
-      }catch(err){alert('Ошибка удаления: '+err.message)}
     }
 
     async function setPlaylistVolume(playlistId, volume){
@@ -454,7 +494,7 @@
     function hideModal(){ $('modal').style.display='none'; $('modalContent').innerHTML=''; }
 
     // -------------------- Utilities --------------------
-    function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
+    function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
 
     // expose some functions for modal buttons
     window.hideModal = hideModal; window.confirmCreatePlaylist = confirmCreatePlaylist; window.confirmAddTrack = confirmAddTrack; window.confirmDeleteTrack = confirmDeleteTrack; window.deleteSelectedTrack = deleteSelectedTrack;

@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 
@@ -19,7 +20,7 @@ impl ConfigError {
 }
 
 
-
+#[derive(Serialize,Deserialize)]
 pub struct Config {
     /// Адрес веб-сервера.
     pub web_server_address: String,
@@ -47,18 +48,15 @@ impl Config {
         // Чтение данных веб-сервера
         let mut web_server_address = "0.0.0.0".to_string();
         let mut web_server_port = 8080u16;
-        let web_server_config = &config["web_server"];
-        if web_server_config.is_object() {
-            if let Some(address) = web_server_config["address"].as_str().map(|s| s.to_string()) {
-                web_server_address = address
-            }
-
-            if let Some(port) = web_server_config["port"].as_u64() {
-                web_server_port = port as u16
-            }
+        if let Some(address) = config["web_server_address"].as_str().map(|s| s.to_string()) {
+            web_server_address = address
         }
 
-        let mut volume = 1f32;
+        if let Some(port) = config["web_server_port"].as_u64() {
+            web_server_port = port as u16
+        }
+
+        let mut volume = 0.5f32;
         if let Some(volume_config) = config["volume"].as_f64() {
             volume = volume_config as f32
         }
@@ -70,5 +68,11 @@ impl Config {
                 volume
             }
         )
+    }
+
+    pub async fn save(&self) {
+        let Ok(data) = serde_json::to_string_pretty(self) else { return };
+
+        let _ = tokio::fs::write(CONFIG_FILE_PATH, data).await;
     }
 }
