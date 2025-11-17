@@ -16,7 +16,7 @@ mod database;
 use database::*;
 use std::{sync::Arc, thread::sleep, time::Duration};
 mod logger;
-use logger::*;
+
 
 
 pub static PLAYLISTS_DATABASE_FILE_PATH: &str = "database/playlists.json";
@@ -30,36 +30,45 @@ async fn main() {
     log!("The scheduled audio player started!");
 
 
-    println!("Parsing configs");
+    log!("Parsing configs");
     let mut config = match Config::load() {
         Ok(config) => config,
         Err(e) => {
-            println!("{}", e.text);
+            log_error!("{}", e.text);
             return
         }
     };
 
+
+    log!("Loading database");
     let mut database = FileDatabase::new().await;
     let playlists = database.load().await;
-
-    println!("Loading playlists");
     let playlists= Playlists::new(playlists);
 
 
+    log!("Creating event loop");
     let (event_queue, event_sender) = EventQueue::new();
 
-    println!("Make up schedule");
-    let mut scheduler = Scheduler::new(Vec::new(), event_sender.clone());
+
+    log!("Making up schedule");
+    let scheduler = Scheduler::new(Vec::new(), event_sender.clone());
     for playlist in playlists.list().await {
         scheduler.commander().add_task(SchedulerTask::new(&playlist.id, playlist.period));
     }
 
+
+    log!("Initializing globals");
     let mut global_volume = config.volume;
     let mut current_playlist = String::new();
     let mut current_track_id = String::new();
     let current_track: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
+
+
+    log!("Starting up audio player");
     let audio_player = AudioPlayer::new(event_sender.clone());
 
+
+    log!("Starting up web server");
     run_webserver(
         config.web_server_address.clone(),
         config.web_server_port.clone(),
@@ -70,10 +79,12 @@ async fn main() {
         event_sender.clone()
     );
 
-    println!("Run");
+
+    log!("Running event loop");
     scheduler.commander().next();
     event_queue.run(async |event| {
-        println!("{event}");
+        log!("{event}");
+
         match event {
             Event::None => {
                 *current_track.write().await = None;
@@ -95,7 +106,7 @@ async fn main() {
                     let playlist_volume = playlist_lock.volume;
 
                     if let Some(track) = track {
-                        println!("PlayTrack name: {}", track.name);
+                        log!("PlayTrack name: {}", track.name);
 
                         current_playlist = playlist_lock.id.clone();
                         current_track_id = track.id.clone();
@@ -110,7 +121,7 @@ async fn main() {
                         audio_player.commander().send(AudioPlayerCommand::Play{ path, volume } );
                     }
                     else {
-                        println!("PlayTrack no track");
+                        log_error!("PlayTrack no track");
 
                         sleep(Duration::from_secs(1));
                         scheduler.commander().next();
@@ -144,6 +155,7 @@ async fn main() {
                     playlist_lock.volume = volume;
 
                     let volume = playlist_lock.volume * volume;
+                    drop(playlist_lock);
                     audio_player.commander().send(AudioPlayerCommand::Volume(volume));
 
                     let playlists = playlists.list().await;
@@ -190,10 +202,8 @@ async fn main() {
             }
 
             Event::DeleteTrack { playlist, track } => {
-                playlists.delete_track(track, playlist).await;
+                playlists.delete_track(track, playlist).await
             }
         }
     }).await;
-
-    scheduler.join();
 }

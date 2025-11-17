@@ -71,6 +71,7 @@ impl Display for Event {
 }
 
 
+
 #[derive(Clone)]
 pub struct EventSender {
     sender: SyncSender<Event>
@@ -81,6 +82,7 @@ impl EventSender {
         let _ = self.sender.send(event);
     }
 }
+
 
 
 pub struct EventQueue {

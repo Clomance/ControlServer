@@ -3,14 +3,14 @@ use symphonia::{core::{audio::{SampleBuffer}, codecs::{Decoder, DecoderOptions, 
 
 use std::{ffi::c_void, fs::File, path::PathBuf, sync::{mpsc::{RecvTimeoutError, SyncSender}}, thread::JoinHandle, time::Duration, vec::IntoIter};
 
-use crate::{event_queue::{Event, EventSender}, sample_rate_transformer::SampleRateConverter};
+use crate::{event_queue::{Event, EventSender}, log, sample_rate_transformer::SampleRateConverter};
 
 
 
 pub struct TrackReader {
     format: Box<dyn FormatReader>,
     decoder: Box<dyn Decoder>,
-    track_id: u32,
+    track_id: u32
 }
 
 impl TrackReader {
@@ -350,7 +350,7 @@ impl AudioPlayer {
         let (sender, receiver) = std::sync::mpsc::sync_channel::<AudioPlayerCommand>(64);
     
         let thread = std::thread::spawn(move || {
-            println!("AudioPlayer start");
+            log!("AudioPlayer start");
 
             let audio_player = AudioEngine::new();
 
@@ -364,14 +364,14 @@ impl AudioPlayer {
                     Ok(command) => match command {
                         AudioPlayerCommand::Play{ path, volume} => {
                             let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-                            println!("Play {name}");
+                            log!("Play {name}");
 
                             if let Ok(file) = std::fs::File::open(path.clone()) {
                                 sound_object  = SoundObject::new(file, &audio_player.wave_format);
 
                                 if sound_object.is_none() {
                                     event_queue.send(Event::Next);
-                                    println!("Decode Error {name}");
+                                    log!("Decode Error {name}");
                                 }
                                 else {
                                     playing = true;
@@ -380,7 +380,7 @@ impl AudioPlayer {
                             }
                             else {
                                 event_queue.send(Event::Next);
-                                println!("File Error {name}");
+                                log!("File Error {name}");
                             }
                         }
 
@@ -407,7 +407,7 @@ impl AudioPlayer {
 
                             if !playing {
                                 sound_object = None;
-                                println!("Track end");
+                                log!("Track end");
                                 event_queue.send(Event::Next);
                             }
                         }
@@ -421,7 +421,7 @@ impl AudioPlayer {
                 });
             }
 
-            println!("AudioPlayer finish");
+            log!("AudioPlayer finish");
         });
 
         Self {

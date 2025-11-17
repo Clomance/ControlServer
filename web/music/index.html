@@ -1,504 +1,603 @@
 <!doctype html>
 <html lang="ru">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1" />
-  <title>Консоль управления музыкой</title>
-  <style>
-    :root{
-      --bg:#ffffff; --muted:#f3f4f6; --panel:#ffffff; --text:#0f172a; --muted-text:#64748b; --accent:#111827; --divider:#e6e7e9;
-      --shadow: 0 6px 18px rgba(14,20,30,0.06);
-    }
-    *{box-sizing:border-box}
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1" />
+        <title>Консоль управления музыкой</title>
+        <style>
+            * {
+                box-sizing: border-box
+            }
 
-    body {
-        width: 80%;
+            :root {
+                --bg: #ffffff;
+                --muted: #f3f4f6;
+                --panel: #ffffff;
+                --text: #0f172a;
+                --muted-text: #64748b;
+                --accent: #111827;
+                --divider: #e6e7e9;
+                --shadow: 0 6px 18px rgba(14, 20, 30, 0.06);
+            }
 
-        font-family: Inter, ui-sans-serif,system-ui, Segoe UI,Roboto, Helvetica, Arial;
-        margin: auto;
-        color: var(--text);
-        background: linear-gradient(180deg,var(--bg), var(--muted));
-    }
+            body {
+                width: 80%;
 
-    .app {
-        display: grid;
-        grid-template-columns: 260px 1fr;
-        grid-template-rows: auto 1fr;
-        gap: 18px;
-        height: 100vh;
-        padding: 18px;
-    }
+                font-family: Inter, ui-sans-serif,system-ui, Segoe UI,Roboto, Helvetica, Arial;
+                margin: auto;
+                color: var(--text);
+                background: linear-gradient(180deg,var(--bg), var(--muted));
+            }
 
-    header.top {
-        grid-column: 1/3;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px;
-        background: var(--panel);
-        border-radius: 12px;
-        box-shadow: var(--shadow);
-        border: 1px solid var(--divider)
-    }
+            .app {
+                display: grid;
+                grid-template-columns: 260px 1fr;
+                grid-template-rows: auto 1fr;
+                gap: 18px;
+                height: 100vh;
+                padding: 18px;
+            }
 
-    .left {
-        background:var(--panel);
-        border-radius:12px;
-        padding:12px;
-        box-shadow:var(--shadow);
-        border:1px solid var(--divider);
-        overflow:auto
-    }
+            header.top {
+                grid-column: 1/3;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px;
+                background: var(--panel);
+                border-radius: 12px;
+                box-shadow: var(--shadow);
+                border: 1px solid var(--divider)
+            }
 
-    .right {
-        background:var(--panel);
-        border-radius:12px;
-        padding:12px;
-        box-shadow:var(--shadow);
-        border:1px solid var(--divider);
-        overflow:auto
-    }
+            .left {
+                background: var(--panel);
+                border-radius: 12px;
+                padding: 12px;
+                box-shadow: var(--shadow);
+                border: 1px solid var(--divider);
+                overflow: auto
+            }
 
-    /* top content */
-    .current-track {
-        flex: 1
-    }
-    .current-track h3 {
-        margin: 0 0 6px 0;
-        font-size: 18px
-    }
+            .right {
+                background: var(--panel);
+                border-radius: 12px;
+                padding: 12px;
+                box-shadow: var(--shadow);
+                border: 1px solid var(--divider);
+                overflow: auto
+            }
 
-    .controls{display:flex; align-items:center; gap:8px}
-    .btn{background:#fff;border:1px solid var(--divider);padding:8px 10px;border-radius:8px; cursor:pointer; min-width:40px}
-    .big-btn{padding:10px 14px}
-    input[type=range]{width:160px}
+            .current-track {
+                flex: 1
+            }
+            .current-track h3 {
+                margin: 0 0 6px 0;
+                font-size: 18px
+            }
 
-    /* playlists */
-    .playlist-list{display:flex;flex-direction:column;gap:8px}
-    .playlist-item{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:8px;border:1px solid var(--divider);background:linear-gradient(180deg,#fff,#fbfbfb)}
-    .playlist-item.selected{outline:2px solid rgba(17,24,39,0.06)}
-    .actions{display:flex;gap:8px}
+            .controls{display:flex; align-items:center; gap:8px}
+            .btn{background:#fff;border:1px solid var(--divider);padding:8px 10px;border-radius:8px; cursor:pointer; min-width:40px}
+            .big-btn{padding:10px 14px}
+            input[type=range]{width:160px}
 
-    /* playlist right */
-    .tracks{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-    .track{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;border:1px solid var(--divider);background:#fff}
-    .track .title{flex:1}
-    .track .track-actions{display:flex;gap:8px;align-items:center}
+            /* playlists */
+            .playlist-list{display:flex;flex-direction:column;gap:8px}
+            .playlist-item{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:8px;border:1px solid var(--divider);background:linear-gradient(180deg,#fff,#fbfbfb)}
+            .playlist-item.selected{outline:2px solid rgba(17,24,39,0.06)}
+            .actions{display:flex;gap:8px}
 
-    /* modal */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(10,10,12,0.45);display:none;align-items:center;justify-content:center}
-    .modal{background:#fff;padding:18px;border-radius:12px;min-width:320px}
+            /* playlist right */
+            .tracks{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+            .track{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;border:1px solid var(--divider);background:#fff}
+            .track .title{flex:1}
+            .track .track-actions{display:flex;gap:8px;align-items:center}
 
-    /* mobile */
-    @media (max-width: 1000px) {
-        body {
-            width: 100%;
-        }
-        .app {
-            grid-template-columns: 1fr;
-            grid-template-rows: auto;
-            padding: 4px
-        }
-        header.top {
-            grid-column: 1/2
-        }
-        .controls {
-            display: block;
-        }
-      .left, .right{width:100%}
-      .left, .right{order:0}
-      .app > .left{order:1}
-      .app > .right{order:2}
-    }
+            /* modal */
+            .modal-backdrop{position:fixed;inset:0;background:rgba(10,10,12,0.45);display:none;align-items:center;justify-content:center}
+            .modal{background:#fff;padding:18px;border-radius:12px;min-width:320px}
 
-    /* small touches */
-    .muted{color:var(--muted-text);font-size:13px}
-    .small{font-size:13px}
-    .icon{display:inline-grid;place-items:center}
-  </style>
-</head>
-<body>
-  <div class="app">
-    <header class="top">
-    <div class="current-track">
-        <h3 id="currentTitle">Текущий трек — —</h3>
-    </div>
-    <div class="controls">
-        <button class="btn big-btn" id="btnPlay">▶</button>
-        <button class="btn big-btn" id="btnPause">❚❚</button>
-        <button class="btn" id="btnNext">⏭</button>
-        <div style="width:8px"></div>
-        <label class="small muted">Громкость</label>
-        <input type="range" id="globalVolume" min="0" max="100" />
-    </div>
-    </header>
+            /* mobile */
+            @media (max-width: 1000px) {
+                body {
+                    width: 100%;
+                }
+                .app {
+                    grid-template-columns: 1fr;
+                    grid-template-rows: auto;
+                    padding: 4px
+                }
+                header.top {
+                    grid-column: 1/2
+                }
+                .controls {
+                    display: block;
+                }
+                .left, .right{width:100%}
+                .left, .right{order:0}
+                .app > .left{order:1}
+                .app > .right{order:2}
+            }
 
-    <aside class="left">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <h4 style="margin:0">Плейлисты</h4>
-        <div class="actions">
-          <button class="btn" id="btnRefresh">⟳</button>
-          <button class="btn" id="btnAddPlaylist">＋</button>
+            /* small touches */
+            .muted{color:var(--muted-text);font-size:13px}
+            .small{font-size:13px}
+            .icon{display:inline-grid;place-items:center}
+
+            .non-display {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="app">
+            <header class="top">
+                <div class="current-track">
+                    <h3 id="currentTitle">Текущий трек — —</h3>
+                </div>
+                <div class="controls">
+                    <button class="btn big-btn" id="btnPlay">▶</button>
+                    <button class="btn big-btn" id="btnPause">❚❚</button>
+                    <button class="btn" id="btnNext">⏭</button>
+                    <div style="width:8px"></div>
+                    <label class="small muted">Громкость</label>
+                    <input type="range" id="globalVolume" min="0" max="100"/>
+                </div>
+            </header>
+
+            <aside class="left">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <h4 style="margin:0">Плейлисты</h4>
+                    <div class="actions">
+                        <button class="btn" id="btnRefresh">⟳</button>
+                        <button class="btn" id="btnAddPlaylist">＋</button>
+                    </div>
+                </div>
+                <div id="playlists" class="playlist-list"></div>
+            </aside>
+
+            <section class="right">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div>
+                        <h4 id="playlistName">—</h4>
+                        <div class="muted small" id="playlistInfo">Выберите плейлист</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <label class="small muted">Громкость</label>
+                        <input type="range" id="playlistVolume" min="0" max="100" style="width:120px" />
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+                    <button class="btn" id="btnAddTrack">＋</button>
+                </div>
+
+                <div id="tracks" class="tracks"></div>
+            </section>
         </div>
-      </div>
-      <div id="playlists" class="playlist-list">
-        <!-- playlists injected here -->
-      </div>
-    </aside>
 
-    <section class="right">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <h4 id="playlistName">—</h4>
-          <div class="muted small" id="playlistInfo">Выберите плейлист</div>
+        <div id="modal" class="modal-backdrop">
+            <div class="modal" id="modalContent"></div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <label class="small muted">Громкость</label>
-          <input type="range" id="playlistVolume" min="0" max="100" style="width:120px" />
-        </div>
-      </div>
 
-      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-        <button class="btn" id="btnAddTrack">＋</button>
-      </div>
+        <audio id="player" controls class="non-display"></audio>
 
-      <div id="tracks" class="tracks"></div>
-    </section>
-  </div>
+        <script>
+            class Player {
+                constructor() {
+                    this.volume = 50;
+                    this.currentTrack = null;
+                }
 
-  <!-- modal for creating playlist / adding track -->
-  <div id="modal" class="modal-backdrop">
-    <div class="modal" id="modalContent">
-      <!-- injected -->
-    </div>
-  </div>
+                bindUI() {
+                    $('globalVolume').oninput = (e) => player.set_volume(e.target.value);
 
-  <audio id="player" controls style="display:none"></audio>
+                    $('btnPlay').onclick = () => player.send_action('play');
+                    $('btnPause').onclick = () => player.send_action('pause');
+                    $('btnNext').onclick = () => player.send_action('next');
+                }
 
-  <script>
-    // -------------------- Configuration / helpers --------------------
-    const apiRoot = '';// assume same origin. If server is at another origin, set URL here.
+                async get_volume() {
+                    try {
+                        const data = await api('/audio_player/volume');
+                        const vol = Math.round((data.volume || 0) * 100);
 
-    function api(path, opts={}){
-      return fetch(apiRoot + path, opts).then(async res => {
-        if(!res.ok){
-          const text = await res.text();
-          throw new Error(res.status + ' ' + res.statusText + '\n' + text);
-        }
-        const ct = res.headers.get('content-type')||'';
-        if(ct.includes('application/json')) return res.json();
-        return res;
-      });
-    }
+                        this.volume = vol;
+                        $('globalVolume').value = vol;
+                    }
+                    catch(err) {
+                        console.warn('Не удалось получить глобальную громкость',err);
+                    }
+                }
 
-    function $(id){return document.getElementById(id)}
+                async set_volume(volume) {
+                    let vol = Number(volume) / 100;
 
-    // -------------------- State --------------------
-    let state = {
-        playlists: [],
-        selectedPlaylistId: null,
-        selectedPlaylist: null,
-        currentTrack: null,
-        globalVolume: 50
-    };
+                    try {
+                        await api('/audio_player/volume/' + encodeURIComponent(vol), { method: 'POST' });
+                        this.volume = vol;
+                    }
+                    catch(err) {
+                        console.warn(err);
+                    }
+                }
 
-    // -------------------- Init --------------------
-    document.addEventListener('DOMContentLoaded', ()=>{
-        bindUI();
-        refreshAll();
+                async send_action(action) {
+                    try {
+                        await api('/audio_player/current/action/' + encodeURIComponent(action), { method: 'POST' });
+                    }
+                    catch(err) {
+                        alert('Ошибка действия: '+err.message);
+                    }
+                }
 
-        setInterval(fetchCurrent, 5000);
-    });
+                async get_current_track() {
+                    try {
+                        const data = await api('/audio_player/current');
+                        this.currentTrack = data.track || null;
+                        $('currentTitle').textContent = this.currentTrack ? ('Текущий трек — ' + this.currentTrack) : 'Текущий трек — —';
+                    }
+                    catch(err) {
+                        console.error('Ошибка получения текущего трека', err);
+                    }
+                }
+            }
 
-    function bindUI(){
-        $('btnRefresh').onclick = refreshPlaylists;
-        $('btnAddPlaylist').onclick = ()=>showCreatePlaylistModal();
-        $('btnAddTrack').onclick = ()=>showAddTrackModal();
-        // fixed: wire delete button to a defined function
-        //   $('btnDeleteTrack').onclick = deleteSelectedTrack;
+            class Playlist {
+                constructor() {
+                    this.volume = 50;
+                }
+            }
 
-        $('btnPlay').onclick = ()=>sendCurrentAction('play');
-        $('btnPause').onclick = ()=>sendCurrentAction('pause');
-        $('btnNext').onclick = ()=>sendCurrentAction('next');
+            const player = new Player();
+            player.bindUI();
 
-        $('globalVolume').oninput = (e)=>{
-            const v = Number(e.target.value);
-            setGlobalVolume(v/100);
-        };
+            let playlist = new Playlist();
 
-        $('playlistVolume').oninput = (e)=>{
-            const v = Number(e.target.value);
-            if(state.selectedPlaylistId) setPlaylistVolume(state.selectedPlaylistId, v/100);
-        };
+            // -------------------- Configuration / helpers --------------------
+            const apiRoot = '';
 
-        // modal close click
-        $('modal').addEventListener('click', (e)=>{ if(e.target === $('modal')) hideModal(); });
-    }
+            function api(path, opts = {}) {
+                return fetch(apiRoot + path, opts).then(async res => {
+                    if (!res.ok) {
+                        const text = await res.text();
+                        throw new Error(res.status + ' ' + res.statusText + '\n' + text);
+                    }
+                    const ct = res.headers.get('content-type') || '';
+                    if (ct.includes('application/json'))
+                        return res.json();
+                    return res;
+                });
+            }
 
-    // -------------------- Server interactions --------------------
-    async function refreshAll(){
-      try{
-        await Promise.all([fetchCurrent(), fetchGlobalVolume(), refreshPlaylists()]);
-      }catch(err){
-        console.error(err);
-        $('serverStatus').textContent = 'Ошибка: ' + err.message;
-      }
-    }
+            function $(id) {
+                return document.getElementById(id)
+            }
 
-    async function fetchCurrent(){
-        try{
-            const data = await api('/audio_player/current');
-            state.currentTrack = data.track || null;
-            $('currentTitle').textContent = state.currentTrack ? ('Текущий трек — ' + state.currentTrack) : 'Текущий трек — —';
-        }catch(err){
-            console.error('Ошибка получения текущего трека', err);
-        }
-    }
+            // -------------------- State --------------------
+            let state = {
+                playlists: [],
+                selectedPlaylistId: null,
+                selectedPlaylist: null
+            };
 
-    async function sendCurrentAction(action){
-      // assumed actions: play, pause, next, prev, toggle
-      try{
-        await api('/audio_player/current/action/' + encodeURIComponent(action), {method:'POST'});
-        await fetchCurrent();
-      }catch(err){
-        alert('Ошибка действия: '+err.message);
-      }
-    }
+            // -------------------- Init --------------------
+            document.addEventListener('DOMContentLoaded', () => {
+                bindUI();
+                refreshAll();
 
-    async function fetchGlobalVolume(){
-      try{
-        const data = await api('/audio_player/volume');
-        const vol = Math.round((data.volume || 0) * 100);
-        state.globalVolume = vol;
-        $('globalVolume').value = vol;
-      }catch(err){console.warn('Не удалось получить глобальную громкость',err)}
-    }
+                setInterval(refreshAll, 5000);
+            });
 
-    async function setGlobalVolume(volume){
-      try{
-        await api('/audio_player/volume/' + encodeURIComponent(volume), {method:'POST'});
-      }catch(err){console.warn(err)}
-    }
+            function bindUI() {
+                $('btnRefresh').onclick = refreshPlaylists;
+                $('btnAddPlaylist').onclick = ()=>showCreatePlaylistModal();
+                $('btnAddTrack').onclick = ()=>showAddTrackModal();
+                //   $('btnDeleteTrack').onclick = deleteSelectedTrack;
 
-    async function refreshPlaylists(){
-      try{
-        const data = await api('/audio_player/playlists');
-        state.playlists = data.playlists || [];
-        renderPlaylists();
-      }catch(err){console.error(err); alert('Ошибка получения плейлистов: '+err.message)}
-    }
+                $('playlistVolume').oninput = (e)=>{
+                    const v = Number(e.target.value);
+                    if(state.selectedPlaylistId) setPlaylistVolume(state.selectedPlaylistId, v/100);
+                };
 
-    function renderPlaylists(){
-        const wrap = $('playlists'); wrap.innerHTML='';
-        state.playlists.forEach(pl =>{
-            const el = document.createElement('div'); el.className='playlist-item';
-            if(pl.id === state.selectedPlaylistId) el.classList.add('selected');
-            el.innerHTML = `
-            <div style="display:flex;flex-direction:column;gap:2px">
-            <div><strong>${escapeHtml(pl.name)}</strong></div>
-            <div class="muted small">ID: ${escapeHtml(pl.id)}</div>
-            <div class="muted small">Треков: ${escapeHtml(pl.tracks_count)}</div>
-            </div>`;
-            el.onclick = ()=>selectPlaylist(pl.id);
-            wrap.appendChild(el);
-        });
-    }
+                // modal close click
+                $('modal').addEventListener('click', (e)=>{ if(e.target === $('modal')) hideModal(); });
+            }
 
-    async function selectPlaylist(id){
-        state.selectedPlaylistId = id;
-        // visually mark
-        renderPlaylists();
-        try{
-            const data = await api('/audio_player/playlist/' + encodeURIComponent(id));
-            state.selectedPlaylist = data.playlist;
-            renderSelectedPlaylist();
-        }
-        catch(err){console.error(err); alert('Ошибка загрузки плейлиста: '+err.message)}
-    }
+            // -------------------- Server interactions --------------------
+            async function refreshAll(){
+                try {
+                    await Promise.all([player.get_current_track(), player.get_volume(), refreshPlaylists()]);
+                }
+                catch(err) {
+                    console.error(err);
+                    $('serverStatus').textContent = 'Ошибка: ' + err.message;
+                }
+            }
 
-    function renderSelectedPlaylist(){
-        const pl = state.selectedPlaylist;
-        if(!pl){ $('playlistName').textContent='—'; $('playlistInfo').textContent='Выберите плейлист'; $('tracks').innerHTML=''; return; }
-        $('playlistName').textContent = `${pl.name || '—'} (ID: ${pl.id || '-'})`;
-        $('playlistInfo').textContent = `Папка: ${pl.directory || '-'} · Треков: ${(pl.tracks||[]).length} · Период: ${pl.period || '-'} с`;
-        $('playlistVolume').value = Math.round((pl.volume||0.5) * 100);
+            async function refreshPlaylists() {
+                try {
+                    const data = await api('/audio_player/playlists');
+                    state.playlists = data.playlists || [];
+                    renderPlaylists();
+                }
+                catch(err) {
+                    console.error(err); alert('Ошибка получения плейлистов: '+err.message)
+                }
+            }
+
+            function renderPlaylists() {
+                const wrap = $('playlists');
+                wrap.innerHTML='';
+                state.playlists.forEach(pl => {
+                    const el = document.createElement('div');
+                    el.className='playlist-item';
+                    if (pl.id === state.selectedPlaylistId) el.classList.add('selected');
+                    el.innerHTML = `
+                        <div style="display:flex;flex-direction:column;gap:2px">
+                        <div><strong>${escapeHtml(pl.name)}</strong></div>
+                        <div class="muted small">ID: ${escapeHtml(pl.id)}</div>
+                        <div class="muted small">Треков: ${escapeHtml(pl.tracks_count)}</div>
+                        </div>`;
+                    el.onclick = () => selectPlaylist(pl.id);
+                    wrap.appendChild(el);
+                });
+            }
+
+            async function selectPlaylist(id) {
+                state.selectedPlaylistId = id;
+                renderPlaylists();
+                try {
+                    const data = await api('/audio_player/playlist/' + encodeURIComponent(id));
+                    state.selectedPlaylist = data.playlist;
+                    renderSelectedPlaylist();
+                }
+                catch(err) {
+                    console.error(err);
+                    alert('Ошибка загрузки плейлиста: '+err.message);
+                }
+            }
+
+            function renderSelectedPlaylist() {
+                const pl = state.selectedPlaylist;
+                if (!pl) {
+                    $('playlistName').textContent='—';
+                    $('playlistInfo').textContent='Выберите плейлист';
+                    $('tracks').innerHTML='';
+                    return;
+                }
+                $('playlistName').textContent = `${pl.name || '—'} (ID: ${pl.id || '-'})`;
+                $('playlistInfo').textContent = `Папка: ${pl.directory || '-'} · Треков: ${(pl.tracks||[]).length} · Период: ${pl.period || '-'} с`;
+                $('playlistVolume').value = Math.round((pl.volume||0.5) * 100);
 
 
-        const twrap = $('tracks'); twrap.innerHTML='';
-        (pl.tracks||[]).forEach(tr=>{
-            const t = document.createElement('div'); t.className='track';
-            t.innerHTML = `
-            <div class="title"><strong>${escapeHtml(tr.name)}</strong><div class="muted small">id: ${escapeHtml(tr.id)}</div></div>
-            <div class="track-actions">
-            <input type="range" max="100" min="0" value="${Math.round((tr.volume||0.5)*100)}" data-trid="${escapeHtml(tr.id)}" />
-            <button class="btn" data-play="${escapeHtml(tr.id)}">▶</button>
-            <button class="btn" data-delete="${escapeHtml(tr.id)}">🗑</button>
-            </div>`;
-            twrap.appendChild(t);
-        });
-    }
+                const twrap = $('tracks');
+                twrap.innerHTML='';
+                (pl.tracks || []).forEach(tr => {
+                    const t = document.createElement('div'); t.className='track';
+                    t.innerHTML = `
+                    <div class="title"><strong>${escapeHtml(tr.name)}</strong><div class="muted small">id: ${escapeHtml(tr.id)}</div></div>
+                    <div class="track-actions">
+                    <input type="range" max="100" min="0" value="${Math.round((tr.volume||0.5)*100)}" data-trid="${escapeHtml(tr.id)}" />
+                    <button class="btn" data-play="${escapeHtml(tr.id)}">▶</button>
+                    <button class="btn" data-delete="${escapeHtml(tr.id)}">🗑</button>
+                    </div>`;
+                    twrap.appendChild(t);
+                });
+            }
 
-    async function createPlaylist(name){
-      try{
-        // NOTE: API spec didn't specify body format. We send JSON {name} — adjust if server expects other format.
-        const res = await api('/audio_player/playlist', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})});
-        // expect {playlist: 'ID'}
-        await refreshPlaylists();
-        hideModal();
-      }catch(err){alert('Ошибка создания плейлиста: '+err.message)}
-    }
+            async function createPlaylist(name) {
+                try {
+                    // NOTE: API spec didn't specify body format. We send JSON {name} — adjust if server expects other format.
+                    const res = await api('/audio_player/playlist', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})});
+                    // expect {playlist: 'ID'}
+                    await refreshPlaylists();
+                    hideModal();
+                }
+                catch(err) {
+                    alert('Ошибка создания плейлиста: '+err.message);
+                }
+            }
 
-    async function setPlaylistVolume(playlistId, volume){
-      try{
-        await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/volume/' + encodeURIComponent(volume), {method:'POST'});
-      }catch(err){console.warn(err)}
-    }
+            async function setPlaylistVolume(playlistId, volume) {
+                try {
+                    await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/volume/' + encodeURIComponent(volume), {method:'POST'});
+                }
+                catch(err) {
+                    console.warn(err);
+                }
+            }
 
-    async function setTrackVolume(playlistId, trackId, volume){
-      try{
-        await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/track/' + encodeURIComponent(trackId) + '/volume/' + encodeURIComponent(volume), {method:'POST'});
-      }catch(err){console.warn(err)}
-    }
+            async function setTrackVolume(playlistId, trackId, volume) {
+                try {
+                    await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/track/' + encodeURIComponent(trackId) + '/volume/' + encodeURIComponent(volume), {method:'POST'});
+                }
+                catch(err) {
+                    console.warn(err);
+                }
+            }
 
-    async function deleteTrack(playlistId, trackId){
-      if(!confirm('Удалить трек?')) return;
-      try{
-        await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/track/' + encodeURIComponent(trackId), {method:'DELETE'});
-        // refresh playlist
-        await selectPlaylist(playlistId);
-      }catch(err){alert('Ошибка удаления трека: '+err.message)}
-    }
+            async function deleteTrack(playlistId, trackId) {
+                if (!confirm('Удалить трек?')) return;
+                try {
+                    await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/track/' + encodeURIComponent(trackId), {method:'DELETE'});
+                    await selectPlaylist(playlistId);
+                }
+                catch(err) {
+                    alert('Ошибка удаления трека: '+err.message);
+                }
+            }
 
-    async function uploadTrack(playlistId, file){
-      try{
-        const fd = new FormData();
-        fd.append('file', file);
-        // server return {track: 'ID'} on success
-        const res = await fetch(apiRoot + '/audio_player/playlist/' + encodeURIComponent(playlistId) + '/track', {method:'POST', body:fd});
-        if(!res.ok){ const t=await res.text(); throw new Error(res.status + ' ' + t); }
-        await selectPlaylist(playlistId);
-        hideModal();
-      }catch(err){alert('Ошибка загрузки трека: '+err.message)}
-    }
+            async function uploadTrack(playlistId, file) {
+                try {
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    // server return {track: 'ID'} on success
+                    const res = await fetch(apiRoot + '/audio_player/playlist/' + encodeURIComponent(playlistId) + '/track', {method:'POST', body:fd});
+                    if (!res.ok) {
+                        const t = await res.text(); throw new Error(res.status + ' ' + t);
+                    }
+                    await selectPlaylist(playlistId);
+                    hideModal();
+                }
+                catch(err) {
+                    alert('Ошибка загрузки трека: '+err.message);
+                }
+            }
 
-    // play track in browser using GET /audio_player/records/{playlist_directory}/{track_name}
-    async function playTrackInBrowser(playlist, track){
-      const player = $('player');
-      // construct URL — be careful to encode both parts
-      const url = apiRoot + '/audio_player/records/' + encodeURIComponent(playlist.directory) + '/' + encodeURIComponent(track.name);
+            // play track in browser using GET /audio_player/records/{playlist_directory}/{track_name}
+            async function playTrackInBrowser(playlist, track) {
+                const player = $('player');
+                // construct URL — be careful to encode both parts
+                const url = apiRoot + '/audio_player/records/' + encodeURIComponent(playlist.directory) + '/' + encodeURIComponent(track.name);
 
-      // First check availability with HEAD to provide clearer error message (helps avoid uncaught blob errors)
-      try{
-        const head = await fetch(url, {method: 'HEAD'});
-        if(!head.ok){
-          const txt = await head.text().catch(()=>head.statusText || 'Not found');
-          alert('Файл недоступен: ' + head.status + ' ' + txt);
-          return;
-        }
-      }catch(err){
-        // network/CORS errors or server refusing HEAD — fallback to trying to load
-        console.warn('HEAD request failed, will try to load directly:', err);
-      }
+                // First check availability with HEAD to provide clearer error message (helps avoid uncaught blob errors)
+                try{
+                    const head = await fetch(url, {method: 'HEAD'});
+                    if (!head.ok) {
+                        const txt = await head.text().catch(()=>head.statusText || 'Not found');
+                        alert('Файл недоступен: ' + head.status + ' ' + txt);
+                        return;
+                    }
+                }
+                catch(err) {
+                    console.warn('HEAD request failed, will try to load directly:', err);
+                }
 
-      // add error handler to audio element to show user-friendly message
-      player.onerror = function(e){
-        const code = player.error && player.error.code ? player.error.code : 'unknown';
-        // try to show network response by fetching the URL (GET small) but avoid altering server state
-        fetch(url).then(async r=>{
-          if(!r.ok){ const txt = await r.text().catch(()=>r.statusText); alert('Ошибка при загрузке трека: ' + r.status + ' ' + txt); }
-        }).catch(()=>{
-          alert('Ошибка при загрузке трека. Проверьте доступность файла на сервере. (audio error code: ' + code + ')');
-        });
-      };
+                // add error handler to audio element to show user-friendly message
+                player.onerror = function(e) {
+                    const code = player.error && player.error.code ? player.error.code : 'unknown';
+                    // try to show network response by fetching the URL (GET small) but avoid altering server state
+                    fetch(url).then(async r => {
+                        if (!r.ok) {
+                            const txt = await r.text().catch(()=>r.statusText); alert('Ошибка при загрузке трека: ' + r.status + ' ' + txt); }
+                        }).catch(()=>{
+                        alert('Ошибка при загрузке трека. Проверьте доступность файла на сервере. (audio error code: ' + code + ')');
+                    });
+                };
 
-      player.src = url;
-      player.style.display='block';
-      player.play().catch(err=>{
-        console.warn('playback error',err);
-        // show friendly message
-        alert('Не удалось начать воспроизведение в браузере: ' + (err && err.message ? err.message : err));
-      });
-    }
+                player.src = url;
+                player.style.display = 'block';
+                player.play().catch(err => {
+                    console.warn('playback error',err);
+                    // show friendly message
+                    alert('Не удалось начать воспроизведение в браузере: ' + (err && err.message ? err.message : err));
+                });
+            }
 
-    function togglePlayPause(){
-      // optimistic: request "toggle"; if server doesn't support, try play/pause based on text
-      const action = 'toggle';
-      sendCurrentAction(action).catch(async ()=>{
-        // fallback: try play
-        await sendCurrentAction('play');
-      });
-    }
+            // -------------------- Modal helpers --------------------
+            function showCreatePlaylistModal() {
+                showModal(`<h3>Новый плейлист</h3>
+                    <div style="margin-top:8px"><input id="newPlaylistName" placeholder="Название" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/></div>
+                    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+                    <button class="btn" onclick="hideModal()">Отмена</button>
+                    <button class="btn" onclick="confirmCreatePlaylist()">Создать</button>
+                    </div>`);
+                setTimeout(() => $('newPlaylistName').focus(), 50);
+            }
+            function confirmCreatePlaylist() {
+                const name = $('newPlaylistName').value.trim();
+                if (!name) {
+                    alert('Введите название');
+                    return;
+                }
+                createPlaylist(name);
+            }
 
-    // -------------------- Modal helpers --------------------
-    function showCreatePlaylistModal(){
-      showModal(`<h3>Новый плейлист</h3>
-        <div style="margin-top:8px"><input id="newPlaylistName" placeholder="Название" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/></div>
-        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-          <button class="btn" onclick="hideModal()">Отмена</button>
-          <button class="btn" onclick="confirmCreatePlaylist()">Создать</button>
-        </div>`);
-      setTimeout(()=>$('newPlaylistName').focus(),50);
-    }
-    function confirmCreatePlaylist(){ const name = $('newPlaylistName').value.trim(); if(!name){alert('Введите название'); return;} createPlaylist(name); }
+            function showAddTrackModal() {
+                if (!state.selectedPlaylistId) {
+                    alert('Выберите плейлист');
+                    return;
+                }
+                showModal(`<h3>Добавить трек</h3>
+                    <div style="margin-top:8px"><input id="trackName" placeholder="(имя файла сохранятся как имя трека)" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/></div>
+                    <div style="margin-top:8px"><input id="trackFile" type="file" accept="audio/*" style="width:100%"/></div>
+                    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+                    <button class="btn" onclick="hideModal()">Отмена</button>
+                    <button class="btn" onclick="confirmAddTrack()">Загрузить</button>
+                    </div>`);
+            }
 
-    function showAddTrackModal(){
-      if(!state.selectedPlaylistId){ alert('Выберите плейлист'); return; }
-      showModal(`<h3>Добавить трек</h3>
-        <div style="margin-top:8px"><input id="trackName" placeholder="(имя файла сохранятся как имя трека)" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/></div>
-        <div style="margin-top:8px"><input id="trackFile" type="file" accept="audio/*" style="width:100%"/></div>
-        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-          <button class="btn" onclick="hideModal()">Отмена</button>
-          <button class="btn" onclick="confirmAddTrack()">Загрузить</button>
-        </div>`);
-    }
-    function confirmAddTrack(){
-      const fileInput = $('trackFile');
-      if(!fileInput.files.length){ alert('Выберите файл'); return; }
-      const file = fileInput.files[0];
-      uploadTrack(state.selectedPlaylistId, file);
-    }
+            function confirmAddTrack() {
+                const fileInput = $('trackFile');
+                if (!fileInput.files.length){
+                    alert('Выберите файл');
+                    return;
+                }
+                const file = fileInput.files[0];
+                uploadTrack(state.selectedPlaylistId, file);
+            }
 
-    // NEW: Delete selected track helper — shows modal with select of tracks
-    function deleteSelectedTrack(){
-      if(!state.selectedPlaylistId || !state.selectedPlaylist){ alert('Выберите плейлист с треками для удаления'); return; }
-      const tracks = state.selectedPlaylist.tracks || [];
-      if(!tracks.length){ alert('В плейлисте нет треков'); return; }
+            // NEW: Delete selected track helper — shows modal with select of tracks
+            function deleteSelectedTrack() {
+                if (!state.selectedPlaylistId || !state.selectedPlaylist) {
+                    alert('Выберите плейлист с треками для удаления');
+                    return;
+                }
+                const tracks = state.selectedPlaylist.tracks || [];
+                if (!tracks.length) {
+                    alert('В плейлисте нет треков');
+                    return;
+                }
 
-      // build select options
-      let options = '';
-      tracks.forEach(t => { options += `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)} (id: ${escapeHtml(t.id)})</option>`; });
+                // build select options
+                let options = '';
+                tracks.forEach(t => {
+                    options += `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)} (id: ${escapeHtml(t.id)})</option>`;
+                });
 
-      showModal(`<h3>Удалить трек</h3>
-        <div style="margin-top:8px">
-          <label class="small muted">Выберите трек для удаления</label>
-          <select id="delTrackSelect" style="width:100%;padding:8px;margin-top:6px;border:1px solid var(--divider);border-radius:8px">${options}</select>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-          <button class="btn" onclick="hideModal()">Отмена</button>
-          <button class="btn" onclick="confirmDeleteTrack()">Удалить</button>
-        </div>`);
-    }
+                showModal(
+                    `<h3>Удалить трек</h3>
+                    <div style="margin-top:8px">
+                    <label class="small muted">Выберите трек для удаления</label>
+                    <select id="delTrackSelect" style="width:100%;padding:8px;margin-top:6px;border:1px solid var(--divider);border-radius:8px">${options}</select>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+                    <button class="btn" onclick="hideModal()">Отмена</button>
+                    <button class="btn" onclick="confirmDeleteTrack()">Удалить</button>
+                    </div>`
+                );
+            }
 
-    async function confirmDeleteTrack(){
-      const sel = $('delTrackSelect');
-      if(!sel) { hideModal(); return; }
-      const trackId = sel.value;
-      if(!trackId){ alert('Выберите трек'); return; }
-      try{
-        await deleteTrack(state.selectedPlaylistId, trackId);
-        hideModal();
-      }catch(err){ alert('Ошибка удаления: ' + err.message); }
-    }
+            async function confirmDeleteTrack() {
+                const sel = $('delTrackSelect');
+                if (!sel) {
+                    hideModal();
+                    return;
+                }
+                const trackId = sel.value;
+                if (!trackId) {
+                    alert('Выберите трек');
+                    return;
+                }
+                try {
+                    await deleteTrack(state.selectedPlaylistId, trackId);
+                    hideModal();
+                }
+                catch(err) {
+                    alert('Ошибка удаления: ' + err.message);
+                }
+            }
 
-    function showModal(html){ $('modalContent').innerHTML = html; $('modal').style.display='flex'; }
-    function hideModal(){ $('modal').style.display='none'; $('modalContent').innerHTML=''; }
+            function showModal(html) {
+                $('modalContent').innerHTML = html;
+                $('modal').style.display = 'flex';
+            }
+            function hideModal() {
+                $('modal').style.display = 'none';
+                $('modalContent').innerHTML = '';
+            }
 
-    // -------------------- Utilities --------------------
-    function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+            // -------------------- Utilities --------------------
+            function escapeHtml(s) {
+                if (s==null)
+                    return '';
+                return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+            }
 
-    // expose some functions for modal buttons
-    window.hideModal = hideModal; window.confirmCreatePlaylist = confirmCreatePlaylist; window.confirmAddTrack = confirmAddTrack; window.confirmDeleteTrack = confirmDeleteTrack; window.deleteSelectedTrack = deleteSelectedTrack;
+            // expose some functions for modal buttons
+            window.hideModal = hideModal; window.confirmCreatePlaylist = confirmCreatePlaylist; window.confirmAddTrack = confirmAddTrack; window.confirmDeleteTrack = confirmDeleteTrack; window.deleteSelectedTrack = deleteSelectedTrack;
 
-  </script>
-</body>
+        </script>
+    </body>
 </html>

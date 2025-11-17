@@ -20,7 +20,7 @@ impl ConfigError {
 }
 
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Config {
     /// Адрес веб-сервера.
     pub web_server_address: String,

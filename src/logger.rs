@@ -1,50 +1,51 @@
-use std::{fmt::Display, fs::OpenOptions, io::Write, sync::mpsc::Sender, thread::JoinHandle};
+use std::{
+    fmt::Display,
+    fs::OpenOptions,
+    io::Write,
+    sync::{mpsc::{Sender, Receiver}, Mutex, OnceLock},
+};
 
 use chrono::Local;
 
 
 
+static LOGGER: OnceLock<Logger> = OnceLock::new();
+
+
+
 #[macro_export]
 macro_rules! log {
-    ($($arg:tt)*) => {
-        unsafe {
-            use crate::logger::*;
-            logger.send_meesage(
-                MessageLevel::Common,
-                format!($($arg)*)
-            )
-        }
-    };
+    ($($arg:tt)*) => {{
+        $crate::logger::get_logger().send_message(
+            $crate::logger::MessageLevel::Common,
+            format!($($arg)*),
+        );
+    }};
 }
 
+#[macro_export]
 macro_rules! log_error {
-    ($($arg:tt)*) => {
-        unsafe {
-            logger.send_meesage(
-                MessageLevel::Error,
-                format_args!($($arg:tt)*)
-            )
-        }
-    };
+    ($($arg:tt)*) => {{
+        $crate::logger::get_logger().send_message(
+            $crate::logger::MessageLevel::Error,
+            format!($($arg)*),
+        );
+    }};
 }
 
+#[macro_export]
 macro_rules! log_panic {
-    ($($arg:tt)*) => {
-        unsafe {
-            logger.send_meesage(
-                MessageLevel::Panic,
-                format_args!($($arg:tt)*)
-            )
-        }
-    };
+    ($($arg:tt)*) => {{
+        $crate::logger::get_logger().send_message(
+            $crate::logger::MessageLevel::Panic,
+            format!($($arg)*),
+        );
+    }};
 }
 
 
 
 pub const LOG_FILE: &'static str = "logs.txt";
-
-
-pub static logger: Logger = Logger::new();
 
 
 
@@ -56,86 +57,66 @@ pub enum MessageLevel {
 
 impl Display for MessageLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(data)
+        let text = match self {
+            MessageLevel::Common => "COMMON",
+            MessageLevel::Error => "ERROR",
+            MessageLevel::Panic => "PANIC"
+        };
+        f.write_str(text)
     }
 }
+
+
 
 pub struct Message {
     level: MessageLevel,
     text: String
 }
 
-impl Message {
-    pub fn new(level: MessageLevel, text: String) -> Message{
-        Self {
-            level,
-            text
-        }
-    }
-}
 
 
 pub struct Logger {
-    inner: Option<LoggerCore>
+    sender: Mutex<Sender<Message>>
 }
 
 impl Logger {
-    pub const fn new() -> Logger {
-        Self {
-            inner: None
-        }
-    }
-
-    pub fn start(&mut self) {
-        self.inner = Some(LoggerCore::new())
-    }
-
-    pub fn send_meesage(&mut self, level: MessageLevel, text: String) {
-        if let Some(core) = &mut self.inner {
-            core.send_meesage(level, text);
-        }
-        else {
-            self.start();
-            self.send_meesage(level, text);
-        }
-    }
-}
-
-
-pub struct LoggerCore {
-    sender: Sender<Message>,
-    thread: Option<JoinHandle<()>>
-}
-
-impl LoggerCore {
-    fn new() -> LoggerCore {
+    fn new() -> Self {
         let (sender, receiver) = std::sync::mpsc::channel::<Message>();
 
-        let mut log_file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .append(true)
-            .create(true)
-            .open(LOG_FILE)
-            .unwrap();
-
-        let thread = std::thread::spawn(move || {
-            while let Ok(message) = receiver.recv() {
-                let mut time = Local::now().format("%d.%m.%Y %H:%M:%S").to_string();
-
-                let log = format!("{} {} {}", time, message.level, message.text);
-
-                let _ = log_file.write_all(log.as_bytes());
-            }
-        });
+        std::thread::spawn(move || logger_thread(receiver));
 
         Self {
-            sender: sender,
-            thread: None
+            sender: Mutex::new(sender)
         }
     }
 
-    pub fn send_meesage(&mut self, level: MessageLevel, text: String) {
-        
+    pub fn send_message(&self, level: MessageLevel, text: String) {
+        if let Ok(sender) = self.sender.lock() {
+            let _ = sender.send(Message { level, text });
+        }
     }
+}
+
+
+
+fn logger_thread(receiver: Receiver<Message>) {
+    let mut file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(LOG_FILE)
+        .expect("cannot open log file");
+
+    while let Ok(message) = receiver.recv() {
+        let time = Local::now().format("%d.%m.%Y %H:%M:%S").to_string();
+        let line = format!("{} [{}] {}\n", time, message.level, message.text);
+
+        let _ = file.write_all(line.as_bytes());
+        let _ = file.flush();
+    }
+}
+
+
+
+pub fn get_logger() -> &'static Logger {
+    LOGGER.get_or_init(|| Logger::new())
 }

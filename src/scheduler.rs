@@ -2,7 +2,7 @@ use std::{collections::{BinaryHeap, HashMap}, sync::mpsc::SyncSender, thread::Jo
 
 use chrono::{DateTime, Local, Timelike};
 
-use crate::{event_queue::EventSender, Event};
+use crate::{Event, event_queue::EventSender, log};
 
 
 
@@ -171,7 +171,7 @@ impl Scheduler {
         let (sender, receiver) = std::sync::mpsc::sync_channel::<SchedulerCommand>(64);
 
         let thread = std::thread::Builder::new().name("SchedulerProcess".to_string()).spawn(move || {
-            println!("The scheduler process started");
+            log!("The scheduler process started");
 
             while let Ok(command) = receiver.recv() {
                 match command {
@@ -191,7 +191,7 @@ impl Scheduler {
                 }
             }
 
-            println!("The scheduler process stopped")
+            log!("The scheduler process stopped")
         }).unwrap();
 
 
@@ -207,8 +207,11 @@ impl Scheduler {
             sender: self.sender.clone()
         }
     }
+}
 
-    pub fn join(&mut self) {
+
+impl Drop for Scheduler {
+    fn drop(&mut self) {
         self.commander().stop();
         if let Some(thread) = self.thread.take() {
             let _ = thread.join();

@@ -151,8 +151,6 @@ impl FileDatabase {
                     }
 
                     if let Some(track) = track {
-                        println!("old: {:?}", track_path);
-
                         let track = Track {
                             id: track.id,
                             name: track.name,
@@ -164,7 +162,6 @@ impl FileDatabase {
                         tracks.push(track);
                     }
                     else {
-                        println!("new: {:?}", track_path);
                         let track = Track {
                             id: gen_id(),
                             name: track_name,
@@ -179,8 +176,6 @@ impl FileDatabase {
                     }
                 }
             }
-
-            
 
             let mut playlist = Playlist::new(&playlist_config);
             playlist.tracks = tracks;

@@ -6,7 +6,7 @@ use tower_http::{cors::{Any, CorsLayer}, services::ServeDir};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::{Mutex, RwLock};
 
-use crate::{TRACKS_DIRECTORY, audio::{AudioPlayerCommand, AudioPlayerCommander}, database::gen_id, event_queue::{Event, EventSender}, playlists::{PlaylistInfo, Playlists}};
+use crate::{TRACKS_DIRECTORY, audio::{AudioPlayerCommand, AudioPlayerCommander}, database::gen_id, event_queue::{Event, EventSender}, log, playlists::{PlaylistInfo, Playlists}};
 
 
 
@@ -103,7 +103,7 @@ pub async fn run_webserver_(
         .layer(cors)
         .layer(DefaultBodyLimit::disable());
 
-    println!("Server listening on http://{address}:{port}");
+    log!("Server listening on http://{address}:{port}");
 
     let address = format!("{address}:{port}");
     let listener = tokio::net::TcpListener::bind(address).await.unwrap();
@@ -149,7 +149,7 @@ async fn post_current_track_action(Path(action): Path<String>, State(state): Sta
         _ => {}
     }
 
-    println!("Action: {action}");
+    log!("Action: {action}");
 
     Response::builder().status(200).body("".to_string()).unwrap()
 }
