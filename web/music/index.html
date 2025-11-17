@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="ru">
     <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1" />
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1"/>
         <title>Консоль управления музыкой</title>
         <style>
             * {
@@ -120,14 +120,96 @@
             }
 
             /* small touches */
-            .muted{color:var(--muted-text);font-size:13px}
-            .small{font-size:13px}
-            .icon{display:inline-grid;place-items:center}
+            .muted {
+                color:var(--muted-text);
+                font-size:13px
+            }
+            .small {
+                font-size:13px
+            }
+            .icon {
+                display:inline-grid;
+                place-items:center
+            }
 
             .non-display {
                 display: none;
             }
         </style>
+
+        <script>
+            function $(id) {
+                return document.getElementById(id)
+            }
+
+            function api(path, opts = {}) {
+                return fetch(apiRoot + path, opts).then(async res => {
+                    if (!res.ok) {
+                        const text = await res.text();
+                        throw new Error(res.status + ' ' + res.statusText + '\n' + text);
+                    }
+                    const ct = res.headers.get('content-type') || '';
+                    if (ct.includes('application/json')) return res.json();
+                    return res;
+                });
+            }
+
+            class Player {
+                constructor() {
+                    this.volume = 50;
+                    this.currentTrack = null;
+                }
+
+                bindUI() {
+                    $('globalVolume').oninput = (e) => player.set_volume(e.target.value);
+                    $('btnPlay').onclick = () => player.send_action('play');
+                    $('btnPause').onclick = () => player.send_action('pause');
+                    $('btnNext').onclick = () => player.send_action('next');
+                }
+
+                async get_volume() {
+                    try {
+                        const data = await api('/audio_player/volume');
+                        this.volume = Math.round((data.volume || 0) * 100);
+                        $('globalVolume').value = this.volume;
+                    }
+                    catch(err) {
+                        console.warn('Не удалось получить глобальную громкость',err);
+                    }
+                }
+
+                async set_volume(volume) {
+                    let vol = Number(volume) / 100;
+                    try {
+                        await api('/audio_player/volume/' + encodeURIComponent(vol), { method: 'POST' });
+                        this.volume = vol;
+                    }
+                    catch(err) {
+                        console.warn(err);
+                    }
+                }
+
+                async send_action(action) {
+                    try {
+                        await api('/audio_player/current/action/' + encodeURIComponent(action), { method: 'POST' });
+                    }
+                    catch(err) {
+                        alert('Ошибка действия: '+err.message);
+                    }
+                }
+
+                async get_current_track() {
+                    try {
+                        const data = await api('/audio_player/current');
+                        this.currentTrack = data.track || null;
+                        $('currentTitle').textContent = this.currentTrack ? ('Текущий трек — ' + this.currentTrack) : 'Текущий трек — —';
+                    }
+                    catch(err) {
+                        console.error('Ошибка получения текущего трека', err);
+                    }
+                }
+            }
+        </script>
     </head>
     <body>
         <div class="app">
@@ -166,6 +248,10 @@
                         <label class="small muted">Громкость</label>
                         <input type="range" id="playlistVolume" min="0" max="100" style="width:120px" />
                     </div>
+
+                    <div>
+                        <button class="btn big-btn" id="btnDelete">X</button>
+                    </div>
                 </div>
 
                 <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
@@ -183,96 +269,74 @@
         <audio id="player" controls class="non-display"></audio>
 
         <script>
-            class Player {
+            class Playlists {
                 constructor() {
-                    this.volume = 50;
-                    this.currentTrack = null;
+                    this.playlists = [];
                 }
 
                 bindUI() {
-                    $('globalVolume').oninput = (e) => player.set_volume(e.target.value);
-
-                    $('btnPlay').onclick = () => player.send_action('play');
-                    $('btnPause').onclick = () => player.send_action('pause');
-                    $('btnNext').onclick = () => player.send_action('next');
+                    $('btnRefresh').onclick = this.refreshPlaylists;
+                    $('btnAddPlaylist').onclick = ()=> showCreatePlaylistModal();
                 }
 
-                async get_volume() {
+                async refreshPlaylists() {
                     try {
-                        const data = await api('/audio_player/volume');
-                        const vol = Math.round((data.volume || 0) * 100);
-
-                        this.volume = vol;
-                        $('globalVolume').value = vol;
+                        const data = await api('/audio_player/playlists');
+                        state.playlists = data.playlists || [];
+                        renderPlaylists();
                     }
                     catch(err) {
-                        console.warn('Не удалось получить глобальную громкость',err);
-                    }
-                }
-
-                async set_volume(volume) {
-                    let vol = Number(volume) / 100;
-
-                    try {
-                        await api('/audio_player/volume/' + encodeURIComponent(vol), { method: 'POST' });
-                        this.volume = vol;
-                    }
-                    catch(err) {
-                        console.warn(err);
-                    }
-                }
-
-                async send_action(action) {
-                    try {
-                        await api('/audio_player/current/action/' + encodeURIComponent(action), { method: 'POST' });
-                    }
-                    catch(err) {
-                        alert('Ошибка действия: '+err.message);
-                    }
-                }
-
-                async get_current_track() {
-                    try {
-                        const data = await api('/audio_player/current');
-                        this.currentTrack = data.track || null;
-                        $('currentTitle').textContent = this.currentTrack ? ('Текущий трек — ' + this.currentTrack) : 'Текущий трек — —';
-                    }
-                    catch(err) {
-                        console.error('Ошибка получения текущего трека', err);
+                        console.error(err); alert('Ошибка получения плейлистов: '+err.message)
                     }
                 }
             }
 
             class Playlist {
                 constructor() {
+                    this.id = null;
+                    this.name = null;
+                    this.tracks = null;
+                    this.period = null;
                     this.volume = 50;
+                }
+
+                bindUI() {
+                    $('playlistVolume').oninput = (e) => {
+                        playlist.setPlaylistVolume(e.target.value);
+                    };
+
+                    $('btnDelete').onclick = () => {
+                        
+                    };
+                }
+
+                async setPlaylistVolume(volume) {
+                    let id = this.playlistId;
+                    if (id == null) return;
+
+                    const vol = Number(volume) / 100;
+
+                    try {
+                        await api('/audio_player/playlist/' + encodeURIComponent(id) + '/volume/' + encodeURIComponent(volume), { method: 'POST' });
+                        this.volume = vol;
+                    }
+                    catch(err) {
+                        console.warn(err);
+                    }
                 }
             }
 
             const player = new Player();
             player.bindUI();
 
+            let playlists = new Playlists();
+            playlists.bindUI();
+
             let playlist = new Playlist();
+            playlist.bindUI();
 
             // -------------------- Configuration / helpers --------------------
             const apiRoot = '';
-
-            function api(path, opts = {}) {
-                return fetch(apiRoot + path, opts).then(async res => {
-                    if (!res.ok) {
-                        const text = await res.text();
-                        throw new Error(res.status + ' ' + res.statusText + '\n' + text);
-                    }
-                    const ct = res.headers.get('content-type') || '';
-                    if (ct.includes('application/json'))
-                        return res.json();
-                    return res;
-                });
-            }
-
-            function $(id) {
-                return document.getElementById(id)
-            }
 
             // -------------------- State --------------------
             let state = {
@@ -290,39 +354,29 @@
             });
 
             function bindUI() {
-                $('btnRefresh').onclick = refreshPlaylists;
-                $('btnAddPlaylist').onclick = ()=>showCreatePlaylistModal();
+                
                 $('btnAddTrack').onclick = ()=>showAddTrackModal();
                 //   $('btnDeleteTrack').onclick = deleteSelectedTrack;
 
-                $('playlistVolume').oninput = (e)=>{
-                    const v = Number(e.target.value);
-                    if(state.selectedPlaylistId) setPlaylistVolume(state.selectedPlaylistId, v/100);
-                };
 
                 // modal close click
                 $('modal').addEventListener('click', (e)=>{ if(e.target === $('modal')) hideModal(); });
             }
 
             // -------------------- Server interactions --------------------
-            async function refreshAll(){
+            async function refreshAll() {
                 try {
-                    await Promise.all([player.get_current_track(), player.get_volume(), refreshPlaylists()]);
+                    await Promise.all(
+                        [
+                            player.get_current_track(),
+                            player.get_volume(),
+                            playlists.refreshPlaylists()
+                        ]
+                    );
                 }
                 catch(err) {
                     console.error(err);
                     $('serverStatus').textContent = 'Ошибка: ' + err.message;
-                }
-            }
-
-            async function refreshPlaylists() {
-                try {
-                    const data = await api('/audio_player/playlists');
-                    state.playlists = data.playlists || [];
-                    renderPlaylists();
-                }
-                catch(err) {
-                    console.error(err); alert('Ошибка получения плейлистов: '+err.message)
                 }
             }
 
@@ -388,23 +442,12 @@
 
             async function createPlaylist(name) {
                 try {
-                    // NOTE: API spec didn't specify body format. We send JSON {name} — adjust if server expects other format.
-                    const res = await api('/audio_player/playlist', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name})});
-                    // expect {playlist: 'ID'}
-                    await refreshPlaylists();
+                    const res = await api('/audio_player/playlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({name}) });
+                    await playlists.refreshPlaylists();
                     hideModal();
                 }
                 catch(err) {
                     alert('Ошибка создания плейлиста: '+err.message);
-                }
-            }
-
-            async function setPlaylistVolume(playlistId, volume) {
-                try {
-                    await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/volume/' + encodeURIComponent(volume), {method:'POST'});
-                }
-                catch(err) {
-                    console.warn(err);
                 }
             }
 

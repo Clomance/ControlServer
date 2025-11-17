@@ -1,11 +1,15 @@
 use std::{
     fmt::Display,
-    fs::OpenOptions,
+    fs::{File, OpenOptions},
     io::Write,
-    sync::{mpsc::{Sender, Receiver}, Mutex, OnceLock},
+    sync::{Mutex, OnceLock, mpsc::{Receiver, Sender}},
 };
 
 use chrono::Local;
+
+
+
+pub const MAX_LOG_SIZE: u64 = 1_000_000;
 
 
 
@@ -98,13 +102,17 @@ impl Logger {
 }
 
 
-
-fn logger_thread(receiver: Receiver<Message>) {
-    let mut file = OpenOptions::new()
+fn open_file(path: &str) -> File {
+    OpenOptions::new()
         .append(true)
         .create(true)
-        .open(LOG_FILE)
-        .expect("cannot open log file");
+        .open(path)
+        .expect("cannot open log file")
+}
+
+
+fn logger_thread(receiver: Receiver<Message>) {
+    let mut file = open_file(LOG_FILE);
 
     while let Ok(message) = receiver.recv() {
         let time = Local::now().format("%d.%m.%Y %H:%M:%S").to_string();
@@ -112,6 +120,14 @@ fn logger_thread(receiver: Receiver<Message>) {
 
         let _ = file.write_all(line.as_bytes());
         let _ = file.flush();
+
+        let Ok(metadata) = file.metadata() else { continue };
+
+        let size = metadata.len();
+
+        if size < MAX_LOG_SIZE { continue }
+
+
     }
 }
 
