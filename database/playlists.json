@@ -1,12 +1,5 @@
 [
   {
-    "id": "music_playlist_02",
-    "name": "Реклама",
-    "directory": "advert",
-    "period": 10,
-    "volume": 0.45
-  },
-  {
     "id": "music_playlist_01",
     "name": "Музыка",
     "directory": "music",
@@ -19,5 +12,12 @@
     "directory": "blackfriday",
     "period": 10,
     "volume": 0.5
+  },
+  {
+    "id": "music_playlist_02",
+    "name": "Реклама",
+    "directory": "advert",
+    "period": 10,
+    "volume": 0.45
   }
 ]
