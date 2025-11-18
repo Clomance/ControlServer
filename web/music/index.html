@@ -166,15 +166,16 @@
                     $('btnPause').onclick = () => this.sendAction('pause');
                     $('btnNext').onclick = () => this.sendAction('next');
 
-                    setInterval(this.update, 5000);
+                    this.update();
+                    setInterval(() => this.update(), 5000);
                 }
 
                 async update() {
                     try {
                         await Promise.all(
                             [
-                                () => this.getCurrentPlayingTrack(),
-                                () => this.getVolume()
+                                this.getCurrentPlayingTrack(),
+                                this.getVolume()
                             ]
                         );
                     }
@@ -223,6 +224,121 @@
                     catch(err) {
                         console.error('Ошибка получения текущего трека', err);
                     }
+                }
+            }
+
+
+            class Playlists {
+                constructor() {
+                    this.playlists = [];
+
+                    this.selectedPlaylist = null;
+                }
+
+                bindUI() {
+                    $('btnRefresh').onclick = () => this.getPlaylists();
+                    $('btnAddPlaylist').onclick = () => this.showCreatePlaylistModal();
+
+                    this.update();
+                    setInterval(() => this.update(), 5000);
+                }
+
+                async update() {
+                    playlists.getPlaylists();
+                    playlists.renderPlaylists();
+                }
+
+                async getPlaylists() {
+                    try {
+                        const data = await api('/audio_player/playlists');
+                        this.playlists = data.playlists || [];
+                        await this.renderPlaylists();
+                    }
+                    catch(err) {
+                        console.error(err);
+                    }
+                }
+
+                async renderPlaylists() {
+                    const wrap = $('playlists');
+
+                    wrap.innerHTML = '';
+
+                    this.playlists.forEach(playlist => {
+                        const element = document.createElement('div');
+                        element.className = 'playlist-item';
+
+                        if (this.selectedPlaylist && playlist.id === this.selectedPlaylist.id) element.classList.add('selected');
+
+                        element.innerHTML = `
+                            <div style="display:flex;flex-direction:column;gap:2px">
+                            <div>${escapeHtml(playlist.name)}</div>
+                            <div class="muted small">ID: ${escapeHtml(playlist.id)}</div>
+                            <div class="muted small">Треков: ${escapeHtml(playlist.tracks_count)}</div>
+                            </div>`;
+                        element.onclick = () => this.selectPlaylist(playlist.id);
+                        wrap.appendChild(element);
+                    });
+                }
+
+                async selectPlaylist(id) {
+                    this.renderPlaylists();
+                    try {
+                        const data = await api('/audio_player/playlist/' + encodeURIComponent(id));
+                        this.selectedPlaylist = new Playlist(data.playlist);
+                        this.selectedPlaylist.bindUI();
+                        this.selectedPlaylist.render();
+                    }
+                    catch(err) {
+                        console.error(err);
+                    }
+                }
+
+                async createPlaylist(name) {
+                    try {
+                        const res = await api('/audio_player/playlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({name}) });
+                        await this.getPlaylists();
+                        await this.renderPlaylists();
+                        hideModal();
+                    }
+                    catch(err) {
+                        alert('Ошибка создания плейлиста: ' + err.message);
+                    }
+                }
+
+                async deletePlaylist(id) {
+                    if (!confirm('Удалить плейлист?')) return;
+
+                    try {
+                        const data = await api('/audio_player/playlist/' + encodeURIComponent(id), { method: 'DELETE' });
+                        await this.getPlaylists();
+                    }
+                    catch(err) {
+                        alert('Ошибка удаления плейлиста: ' + err.message);
+                    }
+                }
+
+                showCreatePlaylistModal() {
+                    showModal(
+                        `<h3>Новый плейлист</h3>
+                        <div style="margin-top:8px">
+                        <input id="newPlaylistName" placeholder="Название" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/>
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+                        <button class="btn" onclick="hideModal()">Отмена</button>
+                        <button class="btn" onclick="playlists.confirmCreatePlaylist()">Создать</button>
+                        </div>`
+                    );
+                    setTimeout(() => $('newPlaylistName').focus(), 50);
+                }
+
+                confirmCreatePlaylist() {
+                    const name = $('newPlaylistName').value.trim();
+                    if (!name) {
+                        alert('Введите название');
+                        return;
+                    }
+                    this.createPlaylist(name);
                 }
             }
         </script>
@@ -285,110 +401,6 @@
         <audio id="player" controls class="non-display"></audio>
 
         <script>
-            class Playlists {
-                constructor() {
-                    this.playlists = [];
-
-                    this.selectedPlaylist = null;
-                }
-
-                bindUI() {
-                    $('btnRefresh').onclick = () => this.getPlaylists();
-                    $('btnAddPlaylist').onclick = () => this.showCreatePlaylistModal();
-                }
-
-                async getPlaylists() {
-                    try {
-                        const data = await api('/audio_player/playlists');
-                        this.playlists = data.playlists || [];
-                        await this.renderPlaylists();
-                    }
-                    catch(err) {
-                        console.error(err);
-                    }
-                }
-
-                async renderPlaylists() {
-                    const wrap = $('playlists');
-
-                    wrap.innerHTML = '';
-
-                    this.playlists.forEach(playlist => {
-                        const element = document.createElement('div');
-                        element.className = 'playlist-item';
-
-                        if (this.selectedPlaylist && playlist.id === this.selectedPlaylist.id) element.classList.add('selected');
-
-                        element.innerHTML = `
-                            <div style="display:flex;flex-direction:column;gap:2px">
-                            <div><strong>${escapeHtml(playlist.name)}</strong></div>
-                            <div class="muted small">ID: ${escapeHtml(playlist.id)}</div>
-                            <div class="muted small">Треков: ${escapeHtml(playlist.tracks_count)}</div>
-                            </div>`;
-                        element.onclick = () => this.selectPlaylist(playlist.id);
-                        wrap.appendChild(element);
-                    });
-                }
-
-                async selectPlaylist(id) {
-                    playlists.renderPlaylists();
-                    try {
-                        const data = await api('/audio_player/playlist/' + encodeURIComponent(id));
-                        this.selectedPlaylist = new Playlist(data.playlist);
-                        this.selectedPlaylist.bindUI();
-                        this.selectedPlaylist.render();
-                    }
-                    catch(err) {
-                        console.error(err);
-                    }
-                }
-
-                async createPlaylist(name) {
-                    try {
-                        const res = await api('/audio_player/playlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({name}) });
-                        await this.getPlaylists();
-                        await this.renderPlaylists();
-                        hideModal();
-                    }
-                    catch(err) {
-                        alert('Ошибка создания плейлиста: ' + err.message);
-                    }
-                }
-
-                async deletePlaylist(id) {
-                    if (!confirm('Удалить плейлист?')) return;
-
-                    try {
-                        const data = await api('/audio_player/playlist/' + encodeURIComponent(id), { method: 'DELETE' });
-                        await this.getPlaylists();
-                    }
-                    catch(err) {
-                        alert('Ошибка удаления плейлиста: ' + err.message);
-                    }
-                }
-
-                showCreatePlaylistModal() {
-                    showModal(
-                        `<h3>Новый плейлист</h3>
-                        <div style="margin-top:8px"><input id="newPlaylistName" placeholder="Название" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/></div>
-                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-                        <button class="btn" onclick="hideModal()">Отмена</button>
-                        <button class="btn" onclick="playlists.confirmCreatePlaylist()">Создать</button>
-                        </div>`
-                    );
-                    setTimeout(() => $('newPlaylistName').focus(), 50);
-                }
-
-                confirmCreatePlaylist() {
-                    const name = $('newPlaylistName').value.trim();
-                    if (!name) {
-                        alert('Введите название');
-                        return;
-                    }
-                    this.createPlaylist(name);
-                }
-            }
-
             class Playlist {
                 constructor(data) {
                     this.id = data.id;
@@ -415,6 +427,16 @@
                     $('modal').addEventListener('click', (e) => { if(e.target === $('modal')) hideModal(); });
                 }
 
+                async update() {
+                    try {
+                        playlists.selectPlaylist(this.id);
+                        this.render();
+                    }
+                    catch(err) {
+                        console.error(err);
+                    }
+                }
+
                 async setPlaylistVolume(volume) {
                     try {
                         const vol = Number(volume) / 100;
@@ -431,19 +453,24 @@
                     $('playlistInfo').textContent = `Папка: ${this.directory || '-'} · Треков: ${(this.tracks || []).length} · Период: ${this.period || '-'} с`;
                     $('playlistVolume').value = Math.round((this.volume || 0.5) * 100);
 
-                    const twrap = $('tracks');
-                    twrap.innerHTML = '';
-                    (this.tracks || []).forEach(tr => {
-                        const t = document.createElement('div');
-                        t.className = 'track';
+                    const trackList = $('tracks');
+                    trackList.innerHTML = '';
+                    (this.tracks || []).forEach(track => {
+                        const trackElement = document.createElement('div');
+                        trackElement.className = 'track';
+
+                        let title = document.createElement('div');
+                        title.innerHTML = 
+
                         t.innerHTML = `
-                            <div class="title"><strong>${escapeHtml(tr.name)}</strong><div class="muted small">id: ${escapeHtml(tr.id)}</div></div>
+                            <div class="title">${escapeHtml(track.name)}<div class="muted small">id: ${escapeHtml(track.id)}</div></div>
                             <div class="track-actions">
-                            <input type="range" max="100" min="0" value="${Math.round((tr.volume||0.5)*100)}" data-trid="${escapeHtml(tr.id)}" />
-                            <button class="btn" data-play="${escapeHtml(tr.id)}">▶</button>
-                            <button class="btn" data-delete="${escapeHtml(tr.id)}">🗑</button>
+                                <input type="range" max="100" min="0" value="${Math.round((track.volume||0.5)*100)}" data-trid="${escapeHtml(track.id)}" />
+                                <button class="btn" data-play="${escapeHtml(track.id)}">▶</button>
+                                <button class="btn" data-delete="${escapeHtml(track.id)}">🗑</button>
                             </div>`;
-                        twrap.appendChild(t);
+
+                        trackList.appendChild(trackElement);
                     });
                 }
 
@@ -451,8 +478,7 @@
                     try {
                         const fd = new FormData();
                         fd.append('file', file);
-                        // server return {track: 'ID'} on success
-                        const res = await fetch('/audio_player/playlist/' + encodeURIComponent(this.id) + '/track', {method:'POST', body:fd});
+                        const res = await fetch('/audio_player/playlist/' + encodeURIComponent(this.id) + '/track', { method: 'POST', body: fd });
                         if (!res.ok) {
                             const t = await res.text();
                             throw new Error(res.status + ' ' + t);
@@ -468,8 +494,8 @@
 
 
             class Track {
-                constructor() {
-
+                constructor(data) {
+                    this.id = data.id;
                 }
 
                 async setTrackVolume(playlistId, trackId, volume) {
@@ -488,25 +514,7 @@
             let playlists = new Playlists();
             playlists.bindUI();
 
-            document.addEventListener('DOMContentLoaded', () => {
-                refreshAll();
-                setInterval(refreshAll, 5000);
-            });
 
-
-            async function refreshAll() {
-                try {
-                    await Promise.all(
-                        [
-                            playlists.getPlaylists()
-                        ]
-                    );
-                }
-                catch(err) {
-                    console.error(err);
-                    $('serverStatus').textContent = 'Ошибка: ' + err.message;
-                }
-            }
 
             async function deleteTrack(playlistId, trackId) {
                 if (!confirm('Удалить трек?')) return;

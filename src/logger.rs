@@ -1,8 +1,5 @@
 use std::{
-    fmt::Display,
-    fs::{File, OpenOptions},
-    io::Write,
-    sync::{Mutex, OnceLock, mpsc::{Receiver, Sender}},
+    fmt::Display, fs::{self, File, OpenOptions}, io::Write, path::Path, sync::{Mutex, OnceLock, mpsc::{Receiver, Sender}}
 };
 
 use chrono::Local;
@@ -50,6 +47,7 @@ macro_rules! log_panic {
 
 
 pub const LOG_FILE: &'static str = "logs.txt";
+pub const LOG_FILE_OLD: &'static str = "logs.old";
 
 
 
@@ -121,12 +119,21 @@ fn logger_thread(receiver: Receiver<Message>) {
         let _ = file.write_all(line.as_bytes());
         let _ = file.flush();
 
-        let Ok(metadata) = file.metadata() else { continue };
 
+        let Ok(metadata) = file.metadata() else { continue };
         let size = metadata.len();
 
         if size < MAX_LOG_SIZE { continue }
 
+        drop(file);
+
+        if Path::new(&LOG_FILE_OLD).exists() {
+            let _ = fs::remove_file(&LOG_FILE_OLD);
+        }
+
+        let _ = fs::rename(LOG_FILE, &LOG_FILE_OLD);
+
+        file = open_file(LOG_FILE);
 
     }
 }
