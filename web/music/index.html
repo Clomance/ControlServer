@@ -264,8 +264,12 @@
                 }
 
                 async update() {
-                    playlists.getPlaylists();
-                    playlists.renderPlaylists();
+                    this.getPlaylists();
+                    this.renderPlaylists();
+
+                    if (this.selectedPlaylist) {
+                        this.selectedPlaylist.update();
+                    }
                 }
 
                 async getPlaylists() {
@@ -302,12 +306,12 @@
                 }
 
                 async selectPlaylist(id) {
-                    this.renderPlaylists();
                     try {
                         let data = await api('/audio_player/playlist/' + encodeURIComponent(id));
                         this.selectedPlaylist = new Playlist(data.playlist);
                         this.selectedPlaylist.bindUI();
                         this.selectedPlaylist.render();
+                        this.renderPlaylists();
                     }
                     catch(err) {
                         console.error(err);
@@ -361,66 +365,7 @@
                     this.createPlaylist(name);
                 }
             }
-        </script>
-    </head>
-    <body>
-        <div class="app">
-            <header class="top">
-                <div class="current-track">
-                    <h3 id="currentTitle">Текущий трек — —</h3>
-                </div>
-                <div class="controls">
-                    <button class="button big-button" id="btnPlay">▶</button>
-                    <button class="button big-button" id="btnPause">❚❚</button>
-                    <button class="button" id="btnNext">⏭</button>
-                    <div style="width:8px"></div>
-                    <label class="small muted">Громкость</label>
-                    <input type="range" id="globalVolume" min="0" max="100"/>
-                </div>
-            </header>
 
-            <aside class="left">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                    <h4 style="margin:0">Плейлисты</h4>
-                    <div class="actions">
-                        <button class="button" id="btnRefresh">⟳</button>
-                        <button class="button" id="btnAddPlaylist">＋</button>
-                    </div>
-                </div>
-                <div id="playlists" class="playlist-list"></div>
-            </aside>
-
-            <section class="right">
-                <div style="display:flex;align-items:center;justify-content:space-between">
-                    <div>
-                        <h4 id="playlistName">—</h4>
-                        <div class="muted small" id="playlistInfo">Выберите плейлист</div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <label class="small muted">Громкость</label>
-                        <input type="range" id="playlistVolume" min="0" max="100" style="width:120px" />
-                    </div>
-
-                    <div>
-                        <button class="button big-button" id="btnDelete">Удалить</button>
-                    </div>
-                </div>
-
-                <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-                    <button class="button" id="btnAddTrack">＋</button>
-                </div>
-
-                <div id="tracks" class="tracks"></div>
-            </section>
-        </div>
-
-        <div id="modal" class="modal-backdrop">
-            <div class="modal" id="modalContent"></div>
-        </div>
-
-        <audio id="player" controls class="non-display"></audio>
-
-        <script>
             class Playlist {
                 constructor(data) {
                     this.id = data.id;
@@ -445,8 +390,6 @@
                     $('btnAddTrack').onclick = () => this.showAddTrackModal();
 
                     $('modal').addEventListener('click', (e) => { if(e.target === $('modal')) hideModal(); });
-
-                    setInterval(() => this.update(), 5000);
                 }
 
                 async update() {
@@ -611,14 +554,66 @@
                     this.uploadTrack(file);
                 }
             }
+        </script>
+    </head>
+    <body>
+        <div class="app">
+            <header class="top">
+                <div class="current-track">
+                    <h3 id="currentTitle">Текущий трек — —</h3>
+                </div>
+                <div class="controls">
+                    <button class="button big-button" id="btnPlay">▶</button>
+                    <button class="button big-button" id="btnPause">❚❚</button>
+                    <button class="button" id="btnNext">⏭</button>
+                    <div style="width:8px"></div>
+                    <label class="small muted">Громкость</label>
+                    <input type="range" id="globalVolume" min="0" max="100"/>
+                </div>
+            </header>
 
+            <aside class="left">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <h4 style="margin:0">Плейлисты</h4>
+                    <div class="actions">
+                        <button class="button" id="btnRefresh">⟳</button>
+                        <button class="button" id="btnAddPlaylist">＋</button>
+                    </div>
+                </div>
+                <div id="playlists" class="playlist-list"></div>
+            </aside>
 
-            class Track {
-                constructor(data) {
-                    this.id = data.id;
-                }
-            }
+            <section class="right">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div>
+                        <h4 id="playlistName">—</h4>
+                        <div class="muted small" id="playlistInfo">Выберите плейлист</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <label class="small muted">Громкость</label>
+                        <input type="range" id="playlistVolume" min="0" max="100" style="width:120px" />
+                    </div>
 
+                    <div>
+                        <button class="button big-button" id="btnDelete">Удалить</button>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+                    <button class="button" id="btnAddTrack">＋</button>
+                </div>
+
+                <div id="tracks" class="tracks"></div>
+            </section>
+        </div>
+
+        <div id="modal" class="modal-backdrop">
+            <div class="modal" id="modalContent"></div>
+        </div>
+
+        <audio id="player" controls class="non-display"></audio>
+
+        <script>
             let serverAudioPlayer = new ServerAudioPlayer();
             serverAudioPlayer.bindUI();
 
