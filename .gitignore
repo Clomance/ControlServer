@@ -1,4 +1,5 @@
 /Cargo.lock
 /target
+/records
 logs.txt
 logs.old
