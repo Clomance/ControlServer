@@ -56,16 +56,18 @@
                 padding: 12px;
                 box-shadow: var(--shadow);
                 border: 1px solid var(--divider);
-                overflow: auto
             }
 
             .right {
+                height: 100%;
                 background: var(--panel);
                 border-radius: 12px;
                 padding: 12px;
                 box-shadow: var(--shadow);
                 border: 1px solid var(--divider);
-                overflow: auto
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
             }
 
             .current-track {
@@ -81,19 +83,37 @@
             .big-button{padding:10px 14px}
             input[type=range]{width:160px}
 
-            /* playlists */
             .playlist-list{display:flex;flex-direction:column;gap:8px}
-            .playlist-item{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:8px;border:1px solid var(--divider);background:linear-gradient(180deg,#fff,#fbfbfb)}
+            .playlist-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px;
+                border-radius: 8px;
+                border: 1px solid var(--divider);
+                background: linear-gradient(180deg,#fff,#fbfbfb)
+            }
+            .playlist-item .title {
+                font-weight: bold;
+            }
+
             .playlist-item.selected{outline:2px solid rgba(17,24,39,0.06)}
             .actions{display:flex;gap:8px}
 
-            /* playlist right */
-            .tracks{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+            .TrackList {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-top: 8px;
+                overflow-y: auto;
+
+                flex: 1;
+                min-height: 0;
+            }
             .track{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;border:1px solid var(--divider);background:#fff}
             .track .title{flex:1}
             .track .track-actions{display:flex;gap:8px;align-items:center}
 
-            /* modal */
             .modal-backdrop{position:fixed;inset:0;background:rgba(10,10,12,0.45);display:none;align-items:center;justify-content:center}
             .modal{background:#fff;padding:18px;border-radius:12px;min-width:320px}
 
@@ -118,13 +138,45 @@
                 .controls {
                     display: block;
                 }
-                .left, .right{width:100%}
-                .left, .right{order:0}
+                .left, .right {
+                    height: 100%;
+                    background: var(--panel);
+                    border-radius: 12px;
+                    padding: 12px;
+                    box-shadow: var(--shadow);
+                    border: 1px solid var(--divider);
+
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 0;
+                }
+                .left, .right {
+                    height: 100%;
+                    background: var(--panel);
+                    border-radius: 12px;
+                    padding: 12px;
+                    box-shadow: var(--shadow);
+                    border: 1px solid var(--divider);
+
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 0;
+                }
                 .app > .left{order:1}
-                .app > .right{order:2}
+                .app > .right {
+                    height: 100%;
+                    background: var(--panel);
+                    border-radius: 12px;
+                    padding: 12px;
+                    box-shadow: var(--shadow);
+                    border: 1px solid var(--divider);
+
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 0;
+                }
             }
 
-            /* small touches */
             .muted {
                 color:var(--muted-text);
                 font-size:13px
@@ -296,7 +348,7 @@
 
                         element.innerHTML = `
                             <div style="display:flex;flex-direction:column;gap:2px">
-                            <div>${escapeHtml(playlist.name)}</div>
+                            <div class="title">${escapeHtml(playlist.name)}</div>
                             <div class="muted small">ID: ${escapeHtml(playlist.id)}</div>
                             <div class="muted small">Треков: ${escapeHtml(playlist.tracks_count)}</div>
                             </div>`;
@@ -366,6 +418,7 @@
                 }
             }
 
+
             class Playlist {
                 constructor(data) {
                     this.id = data.id;
@@ -431,7 +484,7 @@
                     $('playlistInfo').textContent = `Папка: ${this.directory || '-'} · Треков: ${(this.tracks || []).length} · Период: ${this.period || '-'} с`;
                     $('playlistVolume').value = Math.round((this.volume || 0.5) * 100);
 
-                    let trackList = $('tracks');
+                    let trackList = $('TrackList');
                     trackList.innerHTML = '';
                     (this.tracks || []).forEach(track => {
                         let trackElement = document.createElement('div');
@@ -603,7 +656,7 @@
                     <button class="button" id="btnAddTrack">＋</button>
                 </div>
 
-                <div id="tracks" class="tracks"></div>
+                <div id="TrackList" class="TrackList"></div>
             </section>
         </div>
 
