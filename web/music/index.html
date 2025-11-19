@@ -77,8 +77,8 @@
             }
 
             .controls{display:flex; align-items:center; gap:8px}
-            .btn{background:#fff;border:1px solid var(--divider);padding:8px 10px;border-radius:8px; cursor:pointer; min-width:40px}
-            .big-btn{padding:10px 14px}
+            .button{background:#fff;border:1px solid var(--divider);padding:8px 10px;border-radius:8px; cursor:pointer; min-width:40px}
+            .big-button{padding:10px 14px}
             input[type=range]{width:160px}
 
             /* playlists */
@@ -97,7 +97,12 @@
             .modal-backdrop{position:fixed;inset:0;background:rgba(10,10,12,0.45);display:none;align-items:center;justify-content:center}
             .modal{background:#fff;padding:18px;border-radius:12px;min-width:320px}
 
-            /* mobile */
+            @media (max-width: 1200px) {
+                body {
+                    width: 90%;
+                }
+            }
+            
             @media (max-width: 1000px) {
                 body {
                     width: 100%;
@@ -142,19 +147,34 @@
                 return document.getElementById(id)
             }
 
+            function showModal(html) {
+                $('modalContent').innerHTML = html;
+                $('modal').style.display = 'flex';
+            }
+
+            function hideModal() {
+                $('modal').style.display = 'none';
+                $('modalContent').innerHTML = '';
+            }
+
+            function escapeHtml(s) {
+                if (s == null) return '';
+                return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]));
+            }
+
             function api(path, opts = {}) {
                 return fetch(path, opts).then(async res => {
                     if (!res.ok) {
-                        const text = await res.text();
+                        let text = await res.text();
                         throw new Error(res.status + ' ' + res.statusText + '\n' + text);
                     }
-                    const ct = res.headers.get('content-type') || '';
+                    let ct = res.headers.get('content-type') || '';
                     if (ct.includes('application/json')) return res.json();
                     return res;
                 });
             }
 
-            class AudioPlayer {
+            class ServerAudioPlayer {
                 constructor() {
                     this.volume = 50;
                     this.currentTrack = null;
@@ -186,7 +206,7 @@
 
                 async getVolume() {
                     try {
-                        const data = await api('/audio_player/volume');
+                        let data = await api('/audio_player/volume');
                         this.volume = Math.round((data.volume || 0) * 100);
                         $('globalVolume').value = this.volume;
                     }
@@ -217,7 +237,7 @@
 
                 async getCurrentPlayingTrack() {
                     try {
-                        const data = await api('/audio_player/current');
+                        let data = await api('/audio_player/current');
                         this.currentTrack = data.track || null;
                         $('currentTitle').textContent = this.currentTrack ? ('Текущий трек — ' + this.currentTrack) : 'Текущий трек — —';
                     }
@@ -250,7 +270,7 @@
 
                 async getPlaylists() {
                     try {
-                        const data = await api('/audio_player/playlists');
+                        let data = await api('/audio_player/playlists');
                         this.playlists = data.playlists || [];
                         await this.renderPlaylists();
                     }
@@ -260,12 +280,12 @@
                 }
 
                 async renderPlaylists() {
-                    const wrap = $('playlists');
+                    let wrap = $('playlists');
 
                     wrap.innerHTML = '';
 
                     this.playlists.forEach(playlist => {
-                        const element = document.createElement('div');
+                        let element = document.createElement('div');
                         element.className = 'playlist-item';
 
                         if (this.selectedPlaylist && playlist.id === this.selectedPlaylist.id) element.classList.add('selected');
@@ -284,7 +304,7 @@
                 async selectPlaylist(id) {
                     this.renderPlaylists();
                     try {
-                        const data = await api('/audio_player/playlist/' + encodeURIComponent(id));
+                        let data = await api('/audio_player/playlist/' + encodeURIComponent(id));
                         this.selectedPlaylist = new Playlist(data.playlist);
                         this.selectedPlaylist.bindUI();
                         this.selectedPlaylist.render();
@@ -296,7 +316,7 @@
 
                 async createPlaylist(name) {
                     try {
-                        const res = await api('/audio_player/playlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({name}) });
+                        let res = await api('/audio_player/playlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({name}) });
                         await this.getPlaylists();
                         await this.renderPlaylists();
                         hideModal();
@@ -310,7 +330,7 @@
                     if (!confirm('Удалить плейлист?')) return;
 
                     try {
-                        const data = await api('/audio_player/playlist/' + encodeURIComponent(id), { method: 'DELETE' });
+                        let data = await api('/audio_player/playlist/' + encodeURIComponent(id), { method: 'DELETE' });
                         await this.getPlaylists();
                     }
                     catch(err) {
@@ -325,15 +345,15 @@
                         <input id="newPlaylistName" placeholder="Название" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/>
                         </div>
                         <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-                        <button class="btn" onclick="hideModal()">Отмена</button>
-                        <button class="btn" onclick="playlists.confirmCreatePlaylist()">Создать</button>
+                        <button class="button" onclick="hideModal()">Отмена</button>
+                        <button class="button" onclick="playlists.confirmCreatePlaylist()">Создать</button>
                         </div>`
                     );
                     setTimeout(() => $('newPlaylistName').focus(), 50);
                 }
 
                 confirmCreatePlaylist() {
-                    const name = $('newPlaylistName').value.trim();
+                    let name = $('newPlaylistName').value.trim();
                     if (!name) {
                         alert('Введите название');
                         return;
@@ -350,9 +370,9 @@
                     <h3 id="currentTitle">Текущий трек — —</h3>
                 </div>
                 <div class="controls">
-                    <button class="btn big-btn" id="btnPlay">▶</button>
-                    <button class="btn big-btn" id="btnPause">❚❚</button>
-                    <button class="btn" id="btnNext">⏭</button>
+                    <button class="button big-button" id="btnPlay">▶</button>
+                    <button class="button big-button" id="btnPause">❚❚</button>
+                    <button class="button" id="btnNext">⏭</button>
                     <div style="width:8px"></div>
                     <label class="small muted">Громкость</label>
                     <input type="range" id="globalVolume" min="0" max="100"/>
@@ -363,8 +383,8 @@
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
                     <h4 style="margin:0">Плейлисты</h4>
                     <div class="actions">
-                        <button class="btn" id="btnRefresh">⟳</button>
-                        <button class="btn" id="btnAddPlaylist">＋</button>
+                        <button class="button" id="btnRefresh">⟳</button>
+                        <button class="button" id="btnAddPlaylist">＋</button>
                     </div>
                 </div>
                 <div id="playlists" class="playlist-list"></div>
@@ -382,12 +402,12 @@
                     </div>
 
                     <div>
-                        <button class="btn big-btn" id="btnDelete">Удалить</button>
+                        <button class="button big-button" id="btnDelete">Удалить</button>
                     </div>
                 </div>
 
                 <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-                    <button class="btn" id="btnAddTrack">＋</button>
+                    <button class="button" id="btnAddTrack">＋</button>
                 </div>
 
                 <div id="tracks" class="tracks"></div>
@@ -422,14 +442,15 @@
                         await playlists.renderPlaylists();
                     };
 
-                    $('btnAddTrack').onclick = () => showAddTrackModal();
+                    $('btnAddTrack').onclick = () => this.showAddTrackModal();
 
                     $('modal').addEventListener('click', (e) => { if(e.target === $('modal')) hideModal(); });
+
+                    setInterval(() => this.update(), 5000);
                 }
 
                 async update() {
                     try {
-                        playlists.selectPlaylist(this.id);
                         this.render();
                     }
                     catch(err) {
@@ -437,9 +458,23 @@
                     }
                 }
 
+                showAddTrackModal() {
+                    if (!playlists.selectedPlaylist) {
+                        alert('Выберите плейлист');
+                        return;
+                    }
+                    showModal(`<h3>Добавить трек</h3>
+                        <div style="margin-top:8px"><input id="trackName" placeholder="(имя файла сохранятся как имя трека)" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/></div>
+                        <div style="margin-top:8px"><input id="trackFile" type="file" accept="audio/*" style="width:100%"/></div>
+                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+                        <button class="button" onclick="hideModal()">Отмена</button>
+                        <button class="button" onclick="playlists.selectedPlaylist.confirmAddTrack()">Загрузить</button>
+                        </div>`);
+                }
+
                 async setPlaylistVolume(volume) {
                     try {
-                        const vol = Number(volume) / 100;
+                        let vol = Number(volume) / 100;
                         await api('/audio_player/playlist/' + encodeURIComponent(this.id) + '/volume/' + encodeURIComponent(vol), { method: 'POST' });
                         this.volume = vol;
                     }
@@ -453,22 +488,44 @@
                     $('playlistInfo').textContent = `Папка: ${this.directory || '-'} · Треков: ${(this.tracks || []).length} · Период: ${this.period || '-'} с`;
                     $('playlistVolume').value = Math.round((this.volume || 0.5) * 100);
 
-                    const trackList = $('tracks');
+                    let trackList = $('tracks');
                     trackList.innerHTML = '';
                     (this.tracks || []).forEach(track => {
-                        const trackElement = document.createElement('div');
+                        let trackElement = document.createElement('div');
                         trackElement.className = 'track';
 
-                        let title = document.createElement('div');
-                        title.innerHTML = 
 
-                        t.innerHTML = `
-                            <div class="title">${escapeHtml(track.name)}<div class="muted small">id: ${escapeHtml(track.id)}</div></div>
-                            <div class="track-actions">
-                                <input type="range" max="100" min="0" value="${Math.round((track.volume||0.5)*100)}" data-trid="${escapeHtml(track.id)}" />
-                                <button class="btn" data-play="${escapeHtml(track.id)}">▶</button>
-                                <button class="btn" data-delete="${escapeHtml(track.id)}">🗑</button>
-                            </div>`;
+                        let title = document.createElement('div');
+                        title.className = 'title';
+                        title.innerHTML = `${escapeHtml(track.name)}<div class="muted small">id: ${escapeHtml(track.id)}</div>`;
+                        trackElement.appendChild(title);
+
+
+                        let actions = document.createElement('div');
+                        actions.className = 'track-actions';
+
+                        let volume_input = document.createElement('input');
+                        volume_input.type = 'range';
+                        volume_input.min = 0;
+                        volume_input.max = 100;
+                        volume_input.value = Math.round((track.volume || 0.5) * 100);
+                        volume_input.oninput = (e) => this.setTrackVolume(track.id, e.target.value);
+                        trackElement.appendChild(volume_input);
+
+                        let play_button = document.createElement('button');
+                        play_button.className = 'button';
+                        play_button.innerHTML = '▶';
+                        play_button.onclick = () => this.playTrackInBrowser(this, track);
+                        trackElement.appendChild(play_button);
+
+                        let delete_button = document.createElement('button');
+                        delete_button.className = 'button';
+                        delete_button.innerHTML = '🗑';
+                        delete_button.onclick = () => this.deleteTrack(this.id, track.id);
+                        trackElement.appendChild(delete_button);
+
+                        trackElement.appendChild(actions);
+
 
                         trackList.appendChild(trackElement);
                     });
@@ -476,11 +533,11 @@
 
                 async uploadTrack(file) {
                     try {
-                        const fd = new FormData();
+                        let fd = new FormData();
                         fd.append('file', file);
-                        const res = await fetch('/audio_player/playlist/' + encodeURIComponent(this.id) + '/track', { method: 'POST', body: fd });
+                        let res = await fetch('/audio_player/playlist/' + encodeURIComponent(this.id) + '/track', { method: 'POST', body: fd });
                         if (!res.ok) {
-                            const t = await res.text();
+                            let t = await res.text();
                             throw new Error(res.status + ' ' + t);
                         }
                         await playlists.selectPlaylist(this.id);
@@ -490,6 +547,69 @@
                         alert('Ошибка загрузки трека: ' + err.message);
                     }
                 }
+
+                async setTrackVolume(trackId, volume) {
+                    try {
+                        let vol = Number(volume) / 100;
+                        await api('/audio_player/playlist/' + encodeURIComponent(this.id) + '/track/' + encodeURIComponent(trackId) + '/volume/' + encodeURIComponent(vol), {method:'POST'});
+                    }
+                    catch(err) {
+                        console.warn(err);
+                    }
+                }
+
+                async deleteTrack(playlistId, trackId) {
+                    if (!confirm('Удалить трек?')) return;
+                    try {
+                        await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/track/' + encodeURIComponent(trackId), {method:'DELETE'});
+                        await playlists.selectPlaylist(playlistId);
+                    }
+                    catch(err) {
+                        alert('Ошибка удаления трека: ' + err.message);
+                    }
+                }
+
+                async playTrackInBrowser(playlist, track) {
+                    let player = $('player');
+                    let url = '/audio_player/records/' + encodeURIComponent(playlist.directory) + '/' + encodeURIComponent(track.name);
+
+                    try {
+                        let head = await fetch(url, {method: 'HEAD'});
+                        if (!head.ok) {
+                            let txt = await head.text().catch(() => head.statusText || 'Not found');
+                            alert('Файл недоступен: ' + head.status + ' ' + txt);
+                            return;
+                        }
+                    }
+                    catch(err) {
+                        console.warn('HEAD request failed, will try to load directly:', err);
+                    }
+
+                    player.onerror = function(e) {
+                        let code = player.error && player.error.code ? player.error.code : 'unknown';
+                        fetch(url).then(async r => {
+                            if (!r.ok) {
+                                let txt = await r.text().catch(()=>r.statusText);
+                                console.warn('Ошибка при загрузке трека: ' + r.status + ' ' + txt);
+                            }
+                        }).catch(() => {
+                            console.warn('Ошибка при загрузке трека. Проверьте доступность файла на сервере. (audio error code: ' + code + ')');
+                        });
+                    };
+
+                    player.src = url;
+                    player.play().catch(err => console.warn('Не удалось начать воспроизведение в браузере:', err));
+                }
+
+                confirmAddTrack() {
+                    let fileInput = $('trackFile');
+                    if (!fileInput.files.length) {
+                        alert('Выберите файл');
+                        return;
+                    }
+                    let file = fileInput.files[0];
+                    this.uploadTrack(file);
+                }
             }
 
 
@@ -497,169 +617,13 @@
                 constructor(data) {
                     this.id = data.id;
                 }
-
-                async setTrackVolume(playlistId, trackId, volume) {
-                    try {
-                        await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/track/' + encodeURIComponent(trackId) + '/volume/' + encodeURIComponent(volume), {method:'POST'});
-                    }
-                    catch(err) {
-                        console.warn(err);
-                    }
-                }
             }
 
-            const player = new AudioPlayer();
-            player.bindUI();
+            let serverAudioPlayer = new ServerAudioPlayer();
+            serverAudioPlayer.bindUI();
 
             let playlists = new Playlists();
             playlists.bindUI();
-
-
-
-            async function deleteTrack(playlistId, trackId) {
-                if (!confirm('Удалить трек?')) return;
-                try {
-                    await api('/audio_player/playlist/' + encodeURIComponent(playlistId) + '/track/' + encodeURIComponent(trackId), {method:'DELETE'});
-                    await playlists.selectPlaylist(playlistId);
-                }
-                catch(err) {
-                    alert('Ошибка удаления трека: '+err.message);
-                }
-            }
-
-
-            // play track in browser using GET /audio_player/records/{playlist_directory}/{track_name}
-            async function playTrackInBrowser(playlist, track) {
-                const player = $('player');
-                // construct URL — be careful to encode both parts
-                const url = apiRoot + '/audio_player/records/' + encodeURIComponent(playlist.directory) + '/' + encodeURIComponent(track.name);
-
-                // First check availability with HEAD to provide clearer error message (helps avoid uncaught blob errors)
-                try{
-                    const head = await fetch(url, {method: 'HEAD'});
-                    if (!head.ok) {
-                        const txt = await head.text().catch(()=>head.statusText || 'Not found');
-                        alert('Файл недоступен: ' + head.status + ' ' + txt);
-                        return;
-                    }
-                }
-                catch(err) {
-                    console.warn('HEAD request failed, will try to load directly:', err);
-                }
-
-                player.onerror = function(e) {
-                    const code = player.error && player.error.code ? player.error.code : 'unknown';
-                    fetch(url).then(async r => {
-                        if (!r.ok) {
-                            const txt = await r.text().catch(()=>r.statusText);
-                            alert('Ошибка при загрузке трека: ' + r.status + ' ' + txt);
-                        }
-                    }).catch(() => {
-                        alert('Ошибка при загрузке трека. Проверьте доступность файла на сервере. (audio error code: ' + code + ')');
-                    });
-                };
-
-                player.src = url;
-                player.style.display = 'block';
-                player.play().catch(err => {
-                    console.warn('playback error',err);
-                    // show friendly message
-                    alert('Не удалось начать воспроизведение в браузере: ' + (err && err.message ? err.message : err));
-                });
-            }
-
-            function showAddTrackModal() {
-                if (!playlists.selectedPlaylist) {
-                    alert('Выберите плейлист');
-                    return;
-                }
-                showModal(`<h3>Добавить трек</h3>
-                    <div style="margin-top:8px"><input id="trackName" placeholder="(имя файла сохранятся как имя трека)" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/></div>
-                    <div style="margin-top:8px"><input id="trackFile" type="file" accept="audio/*" style="width:100%"/></div>
-                    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-                    <button class="btn" onclick="hideModal()">Отмена</button>
-                    <button class="btn" onclick="confirmAddTrack()">Загрузить</button>
-                    </div>`);
-            }
-
-            function confirmAddTrack() {
-                const fileInput = $('trackFile');
-                if (!fileInput.files.length) {
-                    alert('Выберите файл');
-                    return;
-                }
-                const file = fileInput.files[0];
-                uploadTrack(state.selectedPlaylistId, file);
-            }
-
-            function deleteSelectedTrack() {
-                if (!state.selectedPlaylistId || !state.selectedPlaylist) {
-                    alert('Выберите плейлист с треками для удаления');
-                    return;
-                }
-                const tracks = state.selectedPlaylist.tracks || [];
-                if (!tracks.length) {
-                    alert('В плейлисте нет треков');
-                    return;
-                }
-
-                let options = '';
-                tracks.forEach(t => {
-                    options += `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)} (id: ${escapeHtml(t.id)})</option>`;
-                });
-
-                showModal(
-                    `<h3>Удалить трек</h3>
-                    <div style="margin-top:8px">
-                    <label class="small muted">Выберите трек для удаления</label>
-                    <select id="delTrackSelect" style="width:100%;padding:8px;margin-top:6px;border:1px solid var(--divider);border-radius:8px">${options}</select>
-                    </div>
-                    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-                    <button class="btn" onclick="hideModal()">Отмена</button>
-                    <button class="btn" onclick="confirmDeleteTrack()">Удалить</button>
-                    </div>`
-                );
-            }
-
-            async function confirmDeleteTrack() {
-                const sel = $('delTrackSelect');
-                if (!sel) {
-                    hideModal();
-                    return;
-                }
-                const trackId = sel.value;
-                if (!trackId) {
-                    alert('Выберите трек');
-                    return;
-                }
-                try {
-                    await deleteTrack(state.selectedPlaylistId, trackId);
-                    hideModal();
-                }
-                catch(err) {
-                    alert('Ошибка удаления: ' + err.message);
-                }
-            }
-
-            function showModal(html) {
-                $('modalContent').innerHTML = html;
-                $('modal').style.display = 'flex';
-            }
-
-            function hideModal() {
-                $('modal').style.display = 'none';
-                $('modalContent').innerHTML = '';
-            }
-
-            function escapeHtml(s) {
-                if (s==null) return '';
-                return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-            }
-
-            window.hideModal = hideModal;
-            window.confirmAddTrack = confirmAddTrack;
-            window.confirmDeleteTrack = confirmDeleteTrack;
-            window.deleteSelectedTrack = deleteSelectedTrack;
         </script>
     </body>
 </html>

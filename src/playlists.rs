@@ -170,7 +170,7 @@ impl Playlists {
 
     pub async fn add(&self, id: String, name: String, period: u64) {
         let mut path = PathBuf::from(TRACKS_DIRECTORY);
-        path.push(id.clone());
+        path.push(name.clone());
         let _ = DirBuilder::new().recursive(true).create(path).await;
 
         let mut lock = self.inner.write().await;
