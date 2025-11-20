@@ -422,11 +422,16 @@
 
                 confirmCreatePlaylist() {
                     let name = $('newPlaylistName').value.trim();
+                    let period = parseInt($('newPlaylistPeriod').value.trim());
                     if (!name) {
                         alert('Введите название');
                         return;
                     }
-                    this.createPlaylist(name);
+                    if (!period) {
+                        alert('Введите интервал');
+                        return;
+                    }
+                    this.createPlaylist(name, period);
                 }
             }
 
