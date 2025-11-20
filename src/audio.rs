@@ -43,26 +43,16 @@ impl TrackReader {
 
 
     pub fn  next_packet(&mut self) -> Option<(SampleBuffer<f32>, SignalSpec)> {
-        let mut l = 0;
         loop {
-            l += 1;
-            if l > 10{
-                return None
-            }
-
             let packet = match self.format.next_packet() {
                 Ok(packet) => packet,
                 Err(_) => return None
             };
 
             while !self.format.metadata().is_latest() {
-                // Pop the old head of the metadata queue.
                 self.format.metadata().pop();
-
-                // Consume the new metadata at the head of the metadata queue.
             }
 
-            // If the packet does not belong to the selected track, skip over it.
             if packet.track_id() != self.track_id {
                 continue
             }
@@ -72,8 +62,6 @@ impl TrackReader {
                     let spec = *audio_buffer.spec();
                     let mut sample_buffer = SampleBuffer::<f32>::new(audio_buffer.capacity() as u64, spec);
                     sample_buffer.copy_interleaved_ref(audio_buffer);
-
-                    l = 0;
 
                     return Some((sample_buffer, spec))
                 }
