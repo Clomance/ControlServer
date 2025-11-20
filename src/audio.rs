@@ -1,5 +1,5 @@
 use cat_audio::{backend::{client::{render::AudioRenderClient, AudioClient}, host::{DeviceEnumerator, Host}}, CoTaskMemFree, DeviceRole, OutputBuffer,SampleTransform, ShareMode, StreamFlags, WaveFormat};
-use symphonia::{core::{audio::{SampleBuffer}, codecs::{Decoder, DecoderOptions, CODEC_TYPE_NULL}, formats::{FormatOptions, FormatReader}, io::MediaSourceStream, meta::MetadataOptions}, default::{get_codecs, get_probe}};
+use symphonia::{core::{audio::{SampleBuffer, SignalSpec}, codecs::{CODEC_TYPE_NULL, Decoder, DecoderOptions}, formats::{FormatOptions, FormatReader}, io::MediaSourceStream, meta::MetadataOptions}, default::{get_codecs, get_probe}};
 
 use std::{ffi::c_void, fs::File, path::PathBuf, sync::{mpsc::{RecvTimeoutError, SyncSender}}, thread::JoinHandle, time::Duration, vec::IntoIter};
 
@@ -42,7 +42,7 @@ impl TrackReader {
     }
 
 
-    pub fn  next_packet(&mut self) -> Option<SampleBuffer<f32>> {
+    pub fn  next_packet(&mut self) -> Option<(SampleBuffer<f32>, SignalSpec)> {
         let mut l = 0;
         loop {
             l += 1;
@@ -69,12 +69,13 @@ impl TrackReader {
 
             match self.decoder.decode(&packet) {
                 Ok(audio_buffer) => {
-                    let mut sample_buffer = SampleBuffer::<f32>::new(audio_buffer.capacity() as u64, *audio_buffer.spec());
+                    let spec = *audio_buffer.spec();
+                    let mut sample_buffer = SampleBuffer::<f32>::new(audio_buffer.capacity() as u64, spec);
                     sample_buffer.copy_interleaved_ref(audio_buffer);
 
                     l = 0;
 
-                    return Some(sample_buffer)
+                    return Some((sample_buffer, spec))
                 }
 
                 Err(_) => return None
@@ -88,6 +89,7 @@ pub struct SoundObject {
     reader: TrackReader,
     buffer_size: u32,
     track_channels: usize,
+    track_rate: u32,
     system_format: WaveFormat,
     next_samples: Option<Vec<f32>>,
     samples: SampleRateConverter<IntoIter<f32>>,
@@ -102,14 +104,16 @@ impl SoundObject {
         let buffer_size = system_format.sample_rate * system_format.channels as u32 * 60;
 
         let track_channels = reader.decoder.codec_params().channels.unwrap_or_default().count();
+        let track_rate = reader.decoder.codec_params().sample_rate.unwrap_or(48000);
 
-        let samples = SampleRateConverter::new(Vec::new().into_iter(), reader.decoder.codec_params().sample_rate.unwrap_or(48000), system_format.sample_rate, system_format.channels as u32);
+        let samples = SampleRateConverter::new(Vec::new().into_iter(), track_rate, system_format.sample_rate, system_format.channels as u32);
 
         Some (
             Self {
                 reader,
                 buffer_size,
                 track_channels,
+                track_rate,
                 system_format: system_format.clone(),
                 next_samples: None,
                 samples,
@@ -123,13 +127,17 @@ impl SoundObject {
 impl SoundObject {
     pub fn prepare(&mut self) {
         if let Some(buffer) = self.next_samples.as_mut() {
-            if let Some(samples) = self.reader.next_packet() {
+            if let Some((samples, spec)) = self.reader.next_packet() {
+                self.track_channels = spec.channels.count();
+                self.track_rate = spec.rate;
                 buffer.extend_from_slice(samples.samples());
             }
         }
         else {
             let mut buffer = Vec::with_capacity(self.buffer_size as usize);
-            if let Some(samples) = self.reader.next_packet() {
+            if let Some((samples, spec)) = self.reader.next_packet() {
+                self.track_channels = spec.channels.count();
+                self.track_rate = spec.rate;
                 buffer.extend_from_slice(samples.samples());
                 self.next_samples = Some(buffer);
             }
@@ -163,7 +171,7 @@ impl SoundObject {
 
                     if self.samples.input.len() == 0 {
                         if let Some(next_samples) = self.next_samples.take() {
-                            self.samples = SampleRateConverter::new(next_samples.into_iter(), self.reader.decoder.codec_params().sample_rate.unwrap_or(48000), self.system_format.sample_rate, self.track_channels as u32);
+                            self.samples = SampleRateConverter::new(next_samples.into_iter(), self.track_rate, self.system_format.sample_rate, self.track_channels as u32);
                         }
                         else {
                             self.playing = false
