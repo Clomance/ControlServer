@@ -1,5 +1,10 @@
 use axum::{
-    Json, Router, extract::{DefaultBodyLimit, Multipart, Path, State}, http::{Method, Response}, response::{Html, IntoResponse}, routing::{delete, get, post}
+    Json,
+    Router,
+    extract::{DefaultBodyLimit, Multipart, Path, State},
+    http::{Method, Response},
+    response::{Html, IntoResponse},
+    routing::{delete, get, post}
 };
 use serde::{Deserialize, Serialize};
 use tower_http::{cors::{Any, CorsLayer}, services::ServeDir};
@@ -79,9 +84,10 @@ pub async fn run_webserver_(
         .route("/", get(index))
         // .route("/audio_player/", get())
 
-        // Общие
+        // Плеер
         .route("/audio_player/current", get(get_current_track))
         .route("/audio_player/current/action/{action}", post(post_current_track_action))
+        .route("/audio_player/current/play/{playlist}/{track_id}", post(post_current_track))
         .route("/audio_player/volume", get(get_global_volume))
         .route("/audio_player/volume/{volume}", post(post_global_volume))
 
@@ -152,6 +158,14 @@ async fn post_current_track_action(Path(action): Path<String>, State(state): Sta
     log!("Action: {action}");
 
     Response::builder().status(200).body("".to_string()).unwrap()
+}
+
+/// 
+async fn post_current_track(
+    Path((playlist_id, track_id)): Path<(String, String)>,
+    State(state): State<AppState>
+) -> impl IntoResponse {
+    state.event_queue.send(Event::PlayTrack { playlist_id, track_id });
 }
 
 /// 

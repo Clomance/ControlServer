@@ -7,7 +7,7 @@ use crate::{Event, event_queue::EventSender, log};
 
 
 const START_TIME: u32 = 9;
-const END_TIME: u32 = 23;
+const END_TIME: u32 = 21;
 
 
 

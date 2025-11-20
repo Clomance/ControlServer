@@ -287,6 +287,16 @@
                     }
                 }
 
+                async playTrack(playlist, track) {
+                    try {
+                        await api('/audio_player/current/play/' + encodeURIComponent(playlist) + "/" + encodeURIComponent(track), { method: 'POST' });
+                        setTimeout(() => this.getCurrentPlayingTrack(), 100);
+                    }
+                    catch(err) {
+                        console.error('Ошибка проигрывания трека', err);
+                    }
+                }
+
                 async getCurrentPlayingTrack() {
                     try {
                         let data = await api('/audio_player/current');
@@ -513,7 +523,7 @@
                         let play_button = document.createElement('button');
                         play_button.className = 'button';
                         play_button.innerHTML = '▶';
-                        play_button.onclick = () => this.playTrackInBrowser(this, track);
+                        play_button.onclick = () => serverAudioPlayer.playTrack(this.id, track.id);
                         trackElement.appendChild(play_button);
 
                         let delete_button = document.createElement('button');

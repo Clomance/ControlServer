@@ -87,12 +87,14 @@ async fn main() {
 
         match event {
             Event::None => {
-                *current_track.write().await = None;
-                sleep(Duration::from_secs(1));
-                scheduler.commander().next();
+                if current_track.read().await.is_none() {
+                    sleep(Duration::from_secs(5));
+                    scheduler.commander().next();
+                }
             }
 
             Event::Next => {
+                *current_track.write().await = None;
                 audio_player.commander().send(AudioPlayerCommand::Stop);
                 scheduler.commander().next();
             }
