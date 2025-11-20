@@ -5,15 +5,21 @@ use std::{fmt::Display, sync::mpsc::{Receiver, SyncSender}};
 pub enum Event {
     None,
     Next,
-    PlayTrack(String),
+    PlayPlaylist {
+        id: String
+    },
+    PlayTrack {
+        playlist_id: String,
+        track_id: String
+    },
     SetGlobalVolume(f32),
     SetPlaylistVolume {
-        playlist: String,
+        id: String,
         volume: f32
     },
     SetTrackVolume {
-        playlist: String,
-        track: String,
+        playlist_id: String,
+        track_id: String,
         volume: f32
     },
     AddPlaylist {
@@ -21,16 +27,18 @@ pub enum Event {
         name: String,
         period: u64
     },
-    DeletePlaylist(String),
+    DeletePlaylist {
+        id: String
+    },
     AddTrack {
-        id: String,
-        playlist: String,
+        track_id: String,
+        playlist_id: String,
         name: String,
         file: Vec<u8>
     },
     DeleteTrack {
-        playlist: String,
-        track: String
+        playlist_id: String,
+        track_id: String
     }
 }
 
@@ -43,29 +51,32 @@ impl Display for Event {
             Event::Next =>
                 f.write_fmt(format_args!("Next")),
 
-            Event::PlayTrack(track) =>
-                f.write_fmt(format_args!("PlayTrack({})", track)),
+            Event::PlayPlaylist { id} =>
+                f.write_fmt(format_args!("PlayPlaylist{{ id: {} }}", id)),
+
+            Event::PlayTrack { playlist_id, track_id } =>
+                f.write_fmt(format_args!("PlayTrack{{ playlist_id: {}, track_id: {} }}", playlist_id, track_id)),
 
             Event::SetGlobalVolume(volume) =>
                 f.write_fmt(format_args!("SetGlobalVolume({})", volume)),
 
-            Event::SetPlaylistVolume { playlist, volume } =>
-                f.write_fmt(format_args!("SetPlaylistVolume{{ playlist: {}, volume: {} }}", playlist, volume)),
+            Event::SetPlaylistVolume { id, volume } =>
+                f.write_fmt(format_args!("SetPlaylistVolume{{ id: {}, volume: {} }}", id, volume)),
 
-            Event::SetTrackVolume { playlist, track, volume } =>
-                f.write_fmt(format_args!("SetPlaylistVolume{{ playlist: {}, track: {}, volume: {} }}", playlist, track, volume)),
+            Event::SetTrackVolume { playlist_id, track_id, volume } =>
+                f.write_fmt(format_args!("SetTrackVolume{{ playlist_id: {}, track_id: {}, volume: {} }}", playlist_id, track_id, volume)),
 
             Event::AddPlaylist { id, name, period } =>
                 f.write_fmt(format_args!("AddPlaylist{{ id: {}, name: {}, period: {} }}", id, name, period)),
 
-            Event::DeletePlaylist(playlist) =>
-                f.write_fmt(format_args!("DeletePlaylist({})", playlist)),
+            Event::DeletePlaylist{ id} =>
+                f.write_fmt(format_args!("DeletePlaylist{{ id: {} }}", id)),
 
-            Event::AddTrack { id, playlist, name, file } =>
-                f.write_fmt(format_args!("AddTrack{{ id: {}, playlist: {}, name: {}, file_size: {} }}", id, playlist, name, file.len())),
+            Event::AddTrack { track_id, playlist_id, name, file } =>
+                f.write_fmt(format_args!("AddTrack{{ track_id: {}, playlist_id: {}, name: {}, file_size: {} }}", track_id, playlist_id, name, file.len())),
 
-            Event::DeleteTrack { playlist, track } =>
-                f.write_fmt(format_args!("DeleteTrack{{ playlist: {}, track: {} }}", playlist, track)),
+            Event::DeleteTrack { playlist_id, track_id } =>
+                f.write_fmt(format_args!("DeleteTrack{{ playlist_id: {}, track_id: {} }}", playlist_id, track_id)),
         }
     }
 }

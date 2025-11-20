@@ -370,9 +370,10 @@
                     }
                 }
 
-                async createPlaylist(name) {
+                async createPlaylist(name, period) {
                     try {
-                        let res = await api('/audio_player/playlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({name}) });
+                        let body = JSON.stringify({name, period});
+                        let res = await api('/audio_player/playlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body });
                         await this.getPlaylists();
                         await this.renderPlaylists();
                         hideModal();
@@ -399,6 +400,7 @@
                         `<h3>Новый плейлист</h3>
                         <div style="margin-top:8px">
                         <input id="newPlaylistName" placeholder="Название" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/>
+                        <input id="newPlaylistPeriod" placeholder="Интервал в секундах" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/>
                         </div>
                         <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
                         <button class="button" onclick="hideModal()">Отмена</button>
@@ -662,6 +664,21 @@
 
         <div id="modal" class="modal-backdrop">
             <div class="modal" id="modalContent"></div>
+        </div>
+
+
+        <div id="AddPlaylistModalForm" class="modal-backdrop non-display">
+            <div class="modal">
+                <h3>Новый плейлист</h3>
+                <div style="margin-top:8px">
+                    <input id="newPlaylistName" placeholder="Название" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/>
+                    <input id="newPlaylistPeriod" placeholder="Интервал в секундах" style="width:100%;padding:8px;border:1px solid var(--divider);border-radius:8px"/>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+                    <button class="button" onclick="hideModal()">Отмена</button>
+                    <button class="button" onclick="playlists.confirmCreatePlaylist()">Создать</button>
+                </div>
+            </div>
         </div>
 
         <audio id="player" controls class="non-display"></audio>

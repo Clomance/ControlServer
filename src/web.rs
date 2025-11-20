@@ -206,30 +206,28 @@ async fn get_playlist(Path(playlist): Path<String>, State(state): State<AppState
 #[derive(Deserialize)]
 struct PlaylistPayload {
     name: String,
-    // directory: String,
-    // period: u64
+    period: u64
 }
 /// 
 async fn post_playlist(State(state): State<AppState>, Json(payload): Json<PlaylistPayload>) -> impl IntoResponse {
-    let name = payload.name;
-    let period = 0u64;
-
     let id = gen_id();
+    let name = payload.name;
+    let period = payload.period;
 
-    state.event_queue.send(Event::AddPlaylist { id: id.clone(), name, period });
+    state.event_queue.send(Event::AddPlaylist{ id: id.clone(), name, period });
 
-    Json(serde_json::json!({ "playlist": null }))
+    Json(serde_json::json!({ "playlist": id }))
 }
 
 /// 
-async fn delete_playlist(Path(playlist): Path<String>, State(state): State<AppState>) -> impl IntoResponse {
-    state.event_queue.send(Event::DeletePlaylist(playlist));
+async fn delete_playlist(Path(playlist_id): Path<String>, State(state): State<AppState>) -> impl IntoResponse {
+    state.event_queue.send(Event::DeletePlaylist{ id: playlist_id });
 
     Response::builder().status(200).body("".to_string()).unwrap()
 }
 
 /// 
-async fn post_playlist_volume(Path((playlist, volume)): Path<(String, String)>, State(state): State<AppState>) -> impl IntoResponse {
+async fn post_playlist_volume(Path((playlist_id, volume)): Path<(String, String)>, State(state): State<AppState>) -> impl IntoResponse {
     let mut volume: f32 = volume.parse().unwrap();
 
     if volume > 1f32 {
@@ -239,7 +237,7 @@ async fn post_playlist_volume(Path((playlist, volume)): Path<(String, String)>, 
         volume = 0f32
     }
 
-    state.event_queue.send(Event::SetPlaylistVolume{ playlist, volume });
+    state.event_queue.send(Event::SetPlaylistVolume{ id: playlist_id, volume });
 
     Response::builder().status(200).body("".to_string()).unwrap()
 }
@@ -248,7 +246,7 @@ async fn post_playlist_volume(Path((playlist, volume)): Path<(String, String)>, 
 
 /// 
 async fn post_track_volume(
-    Path((playlist, track, volume)): Path<(String, String, String)>,
+    Path((playlist_id, track_id, volume)): Path<(String, String, String)>,
     State(state): State<AppState>
 ) -> impl IntoResponse {
     let mut volume: f32 = volume.parse().unwrap();
@@ -260,14 +258,14 @@ async fn post_track_volume(
         volume = 0f32
     }
 
-    state.event_queue.send(Event::SetTrackVolume{ playlist, track, volume });
+    state.event_queue.send(Event::SetTrackVolume{ playlist_id, track_id, volume });
 
     Response::builder().status(200).body("".to_string()).unwrap()
 }
 
 /// 
 async fn post_track(
-    Path(playlist): Path<String>,
+    Path(playlist_id): Path<String>,
     State(state): State<AppState>,
     mut multipart: Multipart
 ) -> impl IntoResponse {
@@ -298,16 +296,16 @@ async fn post_track(
 
     let id = gen_id();
 
-    state.event_queue.send(Event::AddTrack { id: id.clone(), playlist, name, file });
+    state.event_queue.send(Event::AddTrack{ track_id: id.clone(), playlist_id, name, file });
 
     Json(serde_json::json!({ "track": id }))
 }
 
 /// 
 async fn delete_track(
-    Path((playlist, track)): Path<(String, String)>,
+    Path((playlist_id, track_id)): Path<(String, String)>,
     State(state): State<AppState>
 ) -> impl IntoResponse {
-    state.event_queue.send(Event::DeleteTrack { playlist, track });
+    state.event_queue.send(Event::DeleteTrack{ playlist_id, track_id });
     Response::builder().status(200).body("".to_string()).unwrap()
 }

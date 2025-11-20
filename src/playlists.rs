@@ -64,7 +64,8 @@ pub struct PlaylistConfig {
     pub name: String,
     pub directory: String,
     pub period: u64,
-    pub volume: f32
+    pub volume: f32,
+    pub enabled: bool
 }
 
 
@@ -76,25 +77,39 @@ pub struct Playlist {
     pub directory: PathBuf,
     pub volume: f32,
     pub period: u64,
+    pub enabled: bool,
     pub tracks: Vec<Track>
 }
 
 impl Playlist {
     pub fn new(config: &PlaylistConfig) -> Playlist {
-        let tracks = Vec::new();
-
         Self {
             id: config.id.clone(),
             name: config.name.clone(),
             directory: PathBuf::from(&config.directory),
             volume: config.volume,
             period: config.period,
-            tracks
+            enabled: config.enabled,
+            tracks: Vec::new()
         }
     }
 
     pub fn short_info(&self) -> PlaylistInfo {
         PlaylistInfo::new(self)
+    }
+
+    pub fn get_track(&self, id: &String) -> Option<Track> {
+        let mut volume = None;
+        self.tracks.iter().any(|t| {
+            let find = &t.id == id;
+
+            if find {
+                volume = Some(t.clone())
+            }
+
+            find
+        });
+        volume
     }
 
     pub fn get_random(&self) -> Option<Track> {
@@ -139,7 +154,8 @@ impl Playlist {
             name: self.name.clone(),
             directory: self.directory.to_string_lossy().to_string(),
             period: self.period,
-            volume: self.volume
+            volume: self.volume,
+            enabled: self.enabled
         }
     }
 
@@ -180,6 +196,7 @@ impl Playlists {
             directory: PathBuf::from(id),
             volume: 0.5,
             period,
+            enabled: true,
             tracks: Vec::new()
         };
         lock.insert(playlist.id.clone(), Arc::new(RwLock::new(playlist)));

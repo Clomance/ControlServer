@@ -97,12 +97,48 @@ async fn main() {
                 scheduler.commander().next();
             }
 
-            Event::PlayTrack(task) => {
-                let playlist = playlists.get(&task).await;
+            Event::PlayPlaylist { id } => {
+                let playlist = playlists.get(&id).await;
 
                 if let Some(playlist) = playlist {
                     let playlist_lock = playlist.read().await;
                     let track = playlist_lock.get_random();
+                    let playlist_volume = playlist_lock.volume;
+
+                    if let Some(track) = track {
+                        log!("PlayTrack name: {}", track.name);
+
+                        current_playlist = playlist_lock.id.clone();
+                        current_track_id = track.id.clone();
+                        drop(playlist_lock);
+
+                        let name = track.name;
+                        let path = track.path;
+
+                        *current_track.write().await = Some(name.to_string());
+
+                        let volume = global_volume * playlist_volume * track.volume;
+                        audio_player.commander().send(AudioPlayerCommand::Play{ path, volume } );
+                    }
+                    else {
+                        log_error!("PlayTrack no track");
+
+                        sleep(Duration::from_secs(1));
+                        scheduler.commander().next();
+                    }
+                }
+                else {
+                    sleep(Duration::from_secs(1));
+                    scheduler.commander().next();
+                }
+            }
+
+            Event::PlayTrack { playlist_id, track_id } => {
+                let playlist = playlists.get(&playlist_id).await;
+
+                if let Some(playlist) = playlist {
+                    let playlist_lock = playlist.read().await;
+                    let track = playlist_lock.get_track(&track_id);
                     let playlist_volume = playlist_lock.volume;
 
                     if let Some(track) = track {
@@ -149,8 +185,8 @@ async fn main() {
                 config.save().await;
             }
 
-            Event::SetPlaylistVolume{ playlist, volume} => {
-                if let Some(playlist) = playlists.get(&playlist).await {
+            Event::SetPlaylistVolume{ id, volume} => {
+                if let Some(playlist) = playlists.get(&id).await {
                     let mut playlist_lock = playlist.write().await;
                     playlist_lock.volume = volume;
 
@@ -164,20 +200,20 @@ async fn main() {
                 }
             }
 
-            Event::SetTrackVolume{ playlist, track, volume} => {
-                if let Some(playlist) = playlists.get(&playlist).await {
+            Event::SetTrackVolume{ playlist_id, track_id, volume} => {
+                if let Some(playlist) = playlists.get(&playlist_id).await {
                     let mut playlist_lock = playlist.write().await;
 
-                    playlist_lock.set_track_volume(track.clone(), volume);
+                    playlist_lock.set_track_volume(track_id.clone(), volume);
 
-                    if current_track_id == track {
+                    if current_track_id == track_id {
                         let volume = playlist_lock.volume * global_volume * volume;
                         audio_player.commander().send(AudioPlayerCommand::Volume(volume));
                     }
                 }
             }
 
-            Event::AddPlaylist { id, name, period } => {
+            Event::AddPlaylist{ id, name, period } => {
                 playlists.add(id.clone(), name, period).await;
 
                 scheduler.commander().add_task(SchedulerTask::new(&id, period));
@@ -187,7 +223,7 @@ async fn main() {
                 let _ = database.playlists.save(&configs).await;
             }
 
-            Event::DeletePlaylist(id) => {
+            Event::DeletePlaylist{ id} => {
                 playlists.delete(id.clone()).await;
 
                 scheduler.commander().delete_task(id);
@@ -197,12 +233,12 @@ async fn main() {
                 let _ = database.playlists.save(&configs).await;
             }
 
-            Event::AddTrack { id, playlist, name, file } => {
-                playlists.add_track(id, playlist, name, file).await
+            Event::AddTrack { track_id, playlist_id, name, file } => {
+                playlists.add_track(track_id, playlist_id, name, file).await
             }
 
-            Event::DeleteTrack { playlist, track } => {
-                playlists.delete_track(track, playlist).await
+            Event::DeleteTrack { playlist_id, track_id } => {
+                playlists.delete_track(track_id, playlist_id).await
             }
         }
     }).await;

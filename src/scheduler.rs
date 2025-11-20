@@ -181,7 +181,7 @@ impl Scheduler {
 
                     SchedulerCommand::Next =>
                         if let Some(task) = scheduler.next() {
-                            let _ = event_queue.send(Event::PlayTrack(task));
+                            let _ = event_queue.send(Event::PlayPlaylist{ id: task });
                         }
                         else {
                             let _ = event_queue.send(Event::None);
