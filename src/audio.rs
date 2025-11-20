@@ -103,8 +103,12 @@ impl SoundObject {
 
         let buffer_size = system_format.sample_rate * system_format.channels as u32 * 60;
 
+<<<<<<< HEAD
         let track_channels = reader.decoder.codec_params().channels.unwrap_or_default().count();
         let track_rate = reader.decoder.codec_params().sample_rate.unwrap_or(48000);
+=======
+        let track_channels = reader.decoder.codec_params().channels.map(|c| c.count()).unwrap_or(1);
+>>>>>>> 229415bbf1b3171add57320ae3d01552666a16b0
 
         let samples = SampleRateConverter::new(Vec::new().into_iter(), track_rate, system_format.sample_rate, system_format.channels as u32);
 
