@@ -38,6 +38,38 @@ impl Track {
 }
 
 
+#[derive(Clone)]
+pub struct Tracks {
+    inner: Arc<RwLock<HashMap<String, Arc<RwLock<Track>>>>>
+}
+
+impl Tracks {
+    pub fn new() -> Tracks {
+        Self {
+            inner: Arc::new(RwLock::new(HashMap::new()))
+        }
+    }
+
+    pub async fn push(&self, track: Track) {
+        let mut lock = self.inner.write().await;
+        let id = track.id.clone();
+        lock.insert(id, Arc::new(RwLock::new(track)));
+    }
+
+    pub async fn get(&self, track_id: &String) -> Option<Track> {
+        let lock = self.inner.read().await;
+        let Some(track) = lock.get(track_id) else { return None };
+        Some(track.read().await.clone())
+    }
+
+    pub async fn remove(&self, track_id: &String) -> Option<Track> {
+        let mut lock = self.inner.write().await;
+        let Some(track) = lock.remove(track_id) else { return None };
+        Some(track.read().await.clone())
+    }
+}
+
+
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct PlaylistInfo {
@@ -238,11 +270,12 @@ impl Playlists {
             let mut playlist = playlist.write().await;
 
             for c in 0..playlist.tracks.len() {
-                let track = &playlist.tracks[c];
+                let Some(track) = &playlist.tracks.get(c) else { return };
 
                 if track.id == track_id {
                     let track = playlist.tracks.remove(c);
                     let _ = tokio::fs::remove_file(track.path).await;
+                    return
                 }
             }
         }

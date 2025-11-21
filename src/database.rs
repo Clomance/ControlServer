@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use tokio::fs::{DirBuilder, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use std::path::{Path, PathBuf};
@@ -6,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json;
 use tokio::fs::File;
 
-use crate::{PLAYLISTS_DATABASE_FILE_PATH, TRACKS_DATABASE_FILE_PATH, TRACKS_DIRECTORY};
+use crate::{GLOBAL_CONFIG_DATABASE_FILE_PATH, PLAYLISTS_DATABASE_FILE_PATH, TRACKS_DATABASE_FILE_PATH, TRACKS_DIRECTORY};
 use crate::playlists::{Playlist, PlaylistConfig, Track, TrackConfig};
 
 
@@ -18,103 +19,158 @@ pub fn gen_id() -> String {
 }
 
 
-pub struct PlaylistsDatabase {
+
+#[derive(Serialize, Deserialize)]
+pub struct GlobalConfig {
+    pub tart_time: String,
+    pub end_time: String,
+    pub volume: f32
+}
+
+
+
+pub struct FileDatabase {
     path: String,
     file: File
 }
 
-impl PlaylistsDatabase {
-    pub async fn open<P: AsRef<Path>>(path: P) -> Result<PlaylistsDatabase, String> {
+impl FileDatabase {
+    pub async fn open<P: AsRef<Path>>(path: P) -> Result<FileDatabase, String> {
         let file = OpenOptions::new().read(true).write(true).create(true).open(&path).await.map_err(|e| format!("failed open db: {}", e))?;
 
         let path = path.as_ref().as_os_str().to_string_lossy().to_string();
 
         Ok(
-            PlaylistsDatabase {
+            FileDatabase {
                 path,
                 file
+            }
+        )
+    }
+
+    pub async fn save<D: Serialize>(&self, data: &D) -> Result<(), String> {
+        let tmp = format!("{}.tmp", &self.path);
+        let json = serde_json::to_string_pretty(data).map_err(|e| format!("failed serialize: {}", e))?;
+        let mut f = File::create(&tmp).await.map_err(|e| format!("failed create tmp file: {}", e))?;
+        f.write_all(json.as_bytes()).await.map_err(|e| format!("failed write tmp file: {}", e))?;
+        tokio::fs::rename(&tmp, &self.path).await.map_err(|e| format!("failed rename tmp file: {}", e))?;
+        Ok(())
+    }
+}
+
+
+pub struct ConfigDatabase {
+    database: FileDatabase
+}
+
+impl ConfigDatabase {
+    pub async fn open<P: AsRef<Path>>(path: P) -> Result<ConfigDatabase, String> {
+        Ok(
+            Self {
+                database: FileDatabase::open(path).await?
+            }
+        )
+    }
+
+    pub async fn load(&mut self) -> Result<GlobalConfig, String> {
+        let mut data = String::new();
+        self.database.file.read_to_string(&mut data).await.map_err(|e| format!("failed read db: {}", e))?;
+
+        let data = serde_json::from_str::<GlobalConfig>(&data).map_err(|e| format!("failed parse db json: {}", e))?;
+
+        Ok(data)
+    }
+
+    pub async fn save(&self, data: &GlobalConfig) -> Result<(), String> {
+        self.database.save(data).await
+    }
+}
+
+
+pub struct PlaylistsDatabase {
+    database: FileDatabase
+}
+
+impl PlaylistsDatabase {
+    pub async fn open<P: AsRef<Path>>(path: P) -> Result<PlaylistsDatabase, String> {
+        Ok(
+            Self {
+                database: FileDatabase::open(path).await?
             }
         )
     }
 
     pub async fn load(&mut self) -> Result<Vec<PlaylistConfig>, String> {
         let mut data = String::new();
-        self.file.read_to_string(&mut data).await.map_err(|e| format!("failed read db: {}", e))?;
+        self.database.file.read_to_string(&mut data).await.map_err(|e| format!("failed read db: {}", e))?;
 
         let data = serde_json::from_str::<Vec<PlaylistConfig>>(&data).map_err(|e| format!("failed parse db json: {}", e))?;
 
         Ok(data)
     }
 
-    pub async fn save(&self, playlists: &[PlaylistConfig]) -> Result<(), String> {
-        let tmp = format!("{}.tmp", &self.path);
-        let json = serde_json::to_string_pretty(playlists).map_err(|e| format!("failed serialize: {}", e))?;
-        let mut f = File::create(&tmp).await.map_err(|e| format!("failed create tmp file: {}", e))?;
-        f.write_all(json.as_bytes()).await.map_err(|e| format!("failed write tmp file: {}", e))?;
-        tokio::fs::rename(&tmp, &self.path).await.map_err(|e| format!("failed rename tmp file: {}", e))?;
-        Ok(())
+    pub async fn save(&self, data: &Vec<PlaylistConfig>) -> Result<(), String> {
+        self.database.save(data).await
     }
 }
 
 
 
 pub struct TracksDatabase {
-    path: String,
-    file: File
+    database: FileDatabase
 }
 
 impl TracksDatabase {
     pub async fn open<P: AsRef<Path>>(path: P) -> Result<TracksDatabase, String> {
-        let file = OpenOptions::new().read(true).write(true).create(true).open(&path).await.map_err(|e| format!("failed open db: {}", e))?;
-
-        let path = path.as_ref().as_os_str().to_string_lossy().to_string();
-
         Ok(
-            TracksDatabase {
-                path,
-                file
+            Self {
+                database: FileDatabase::open(path).await?
             }
         )
     }
 
     pub async fn load(&mut self) -> Result<Vec<TrackConfig>, String> {
         let mut data = String::new();
-        self.file.read_to_string(&mut data).await.map_err(|e| format!("failed read db: {}", e))?;
+        self.database.file.read_to_string(&mut data).await.map_err(|e| format!("failed read db: {}", e))?;
 
         let data = serde_json::from_str::<Vec<TrackConfig>>(&data).map_err(|e| format!("failed parse db json: {}", e))?;
 
         Ok(data)
     }
 
-    pub async fn save(&self, track: &[TrackConfig]) -> Result<(), String> {
-        let tmp = format!("{}.tmp", &self.path);
-        let json = serde_json::to_string_pretty(track).map_err(|e| format!("failed serialize: {}", e))?;
-        let mut f = File::create(&tmp).await.map_err(|e| format!("failed create tmp file: {}", e))?;
-        f.write_all(json.as_bytes()).await.map_err(|e| format!("failed write tmp file: {}", e))?;
-        tokio::fs::rename(&tmp, &self.path).await.map_err(|e| format!("failed rename tmp file: {}", e))?;
-        Ok(())
+    pub async fn save(&self, data: &Vec<TrackConfig>) -> Result<(), String> {
+        self.database.save(data).await
     }
 }
 
 
 
-pub struct FileDatabase {
+pub struct Database {
+    pub config: ConfigDatabase,
     pub playlists: PlaylistsDatabase,
     pub tracks: TracksDatabase
 }
 
-impl FileDatabase {
-    pub async fn new() -> FileDatabase {
+impl Database {
+    pub async fn new() -> Database {
+        let config = ConfigDatabase::open(GLOBAL_CONFIG_DATABASE_FILE_PATH).await.unwrap();
         let playlists = PlaylistsDatabase::open(PLAYLISTS_DATABASE_FILE_PATH).await.unwrap();
         let tracks = TracksDatabase::open(TRACKS_DATABASE_FILE_PATH).await.unwrap();
 
         Self {
+            config,
             playlists,
             tracks
         }
     }
 
+    pub async fn load_config(&mut self) -> GlobalConfig {
+        self.config.load().await.unwrap()
+    }
+
     pub async fn load(&mut self) -> Vec<Playlist> {
+
+
         let playlists_configs = self.playlists.load().await.unwrap();
         let mut tracks_configs = self.tracks.load().await.unwrap();
 

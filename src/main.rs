@@ -18,7 +18,7 @@ use std::{sync::Arc, thread::sleep, time::Duration};
 mod logger;
 
 
-
+pub static GLOBAL_CONFIG_DATABASE_FILE_PATH: &str = "database/playlists.json";
 pub static PLAYLISTS_DATABASE_FILE_PATH: &str = "database/playlists.json";
 pub static TRACKS_DATABASE_FILE_PATH: &str = "database/tracks.json";
 pub static TRACKS_DIRECTORY: &str = "records";
@@ -29,9 +29,12 @@ pub static TRACKS_DIRECTORY: &str = "records";
 async fn main() {
     log!("The scheduled audio player started!");
 
+    std::panic::set_hook(Box::new(|info| {
+        log_panic!("{}", info)
+    }));
 
     log!("Parsing configs");
-    let mut config = match Config::load() {
+    let mut server_config = match Config::load() {
         Ok(config) => config,
         Err(e) => {
             log_error!("{}", e.text);
@@ -41,7 +44,8 @@ async fn main() {
 
 
     log!("Loading database");
-    let mut database = FileDatabase::new().await;
+    let mut database = Database::new().await;
+    let global_config = database.load_config().await;
     let playlists = database.load().await;
     let playlists= Playlists::new(playlists);
 
@@ -58,7 +62,7 @@ async fn main() {
 
 
     log!("Initializing globals");
-    let mut global_volume = config.volume;
+    let mut global_volume = global_config.volume;
     let mut current_playlist = String::new();
     let mut current_track_id = String::new();
     let current_track: Arc<RwLock<Option<String>>> = Arc::new(RwLock::new(None));
@@ -70,8 +74,8 @@ async fn main() {
 
     log!("Starting up web server");
     run_webserver(
-        config.web_server_address.clone(),
-        config.web_server_port.clone(),
+        server_config.web_server_address.clone(),
+        server_config.web_server_port.clone(),
         global_volume,
         playlists.clone(),
         current_track.clone(),
@@ -173,7 +177,7 @@ async fn main() {
 
             Event::SetGlobalVolume(volume) => {
                 global_volume = volume;
-                config.volume = volume;
+                server_config.volume = volume;
 
                 if let Some(playlist) = playlists.get(&current_playlist).await {
                     let playlist_lock = playlist.read().await;
@@ -184,7 +188,7 @@ async fn main() {
                     }
                 }
 
-                config.save().await;
+                server_config.save().await;
             }
 
             Event::SetPlaylistVolume{ id, volume} => {
@@ -241,6 +245,18 @@ async fn main() {
 
             Event::DeleteTrack { playlist_id, track_id } => {
                 playlists.delete_track(track_id, playlist_id).await
+            }
+
+            Event::EnablePlaylist { id, enabled } => {
+
+            }
+
+            Event::UpdatePlaylist { id, name, period } => {
+
+            }
+
+            Event::UpdateTrack { playlist_id, track_id, name } => {
+
             }
         }
     }).await;

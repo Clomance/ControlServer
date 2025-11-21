@@ -17,10 +17,14 @@ pub enum Event {
         id: String,
         volume: f32
     },
-    SetTrackVolume {
-        playlist_id: String,
-        track_id: String,
-        volume: f32
+    UpdatePlaylist {
+        id: String,
+        name: String,
+        period: u64
+    },
+    EnablePlaylist {
+        id: String,
+        enabled: u64
     },
     AddPlaylist {
         id: String,
@@ -35,6 +39,16 @@ pub enum Event {
         playlist_id: String,
         name: String,
         file: Vec<u8>
+    },
+    SetTrackVolume {
+        playlist_id: String,
+        track_id: String,
+        volume: f32
+    },
+    UpdateTrack {
+        playlist_id: String,
+        track_id: String,
+        name: String
     },
     DeleteTrack {
         playlist_id: String,
@@ -63,8 +77,8 @@ impl Display for Event {
             Event::SetPlaylistVolume { id, volume } =>
                 f.write_fmt(format_args!("SetPlaylistVolume{{ id: {}, volume: {} }}", id, volume)),
 
-            Event::SetTrackVolume { playlist_id, track_id, volume } =>
-                f.write_fmt(format_args!("SetTrackVolume{{ playlist_id: {}, track_id: {}, volume: {} }}", playlist_id, track_id, volume)),
+            Event::UpdatePlaylist { id, name, period } =>
+                f.write_fmt(format_args!("UpdatePlaylist{{ id: {}, name: {}, period: {} }}", id, name, period)),
 
             Event::AddPlaylist { id, name, period } =>
                 f.write_fmt(format_args!("AddPlaylist{{ id: {}, name: {}, period: {} }}", id, name, period)),
@@ -75,8 +89,17 @@ impl Display for Event {
             Event::AddTrack { track_id, playlist_id, name, file } =>
                 f.write_fmt(format_args!("AddTrack{{ track_id: {}, playlist_id: {}, name: {}, file_size: {} }}", track_id, playlist_id, name, file.len())),
 
+            Event::SetTrackVolume { playlist_id, track_id, volume } =>
+                f.write_fmt(format_args!("SetTrackVolume{{ playlist_id: {}, track_id: {}, volume: {} }}", playlist_id, track_id, volume)),
+
             Event::DeleteTrack { playlist_id, track_id } =>
                 f.write_fmt(format_args!("DeleteTrack{{ playlist_id: {}, track_id: {} }}", playlist_id, track_id)),
+
+            Event::EnablePlaylist { id, enabled } =>
+                f.write_fmt(format_args!("EnablePlaylist{{ id: {}, enabled: {} }}", id, enabled)),
+
+            Event::UpdateTrack { playlist_id, track_id, name } =>
+                f.write_fmt(format_args!("UpdateTrack{{ playlist_id: {}, track_id: {}, name: {} }}", playlist_id, track_id, name)),
         }
     }
 }

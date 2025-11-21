@@ -2,7 +2,7 @@ use std::{collections::{BinaryHeap, HashMap}, sync::mpsc::SyncSender, thread::Jo
 
 use chrono::{DateTime, Local, Timelike};
 
-use crate::{Event, event_queue::EventSender, log};
+use crate::{Event, event_queue::EventSender, log, log_panic};
 
 
 
@@ -172,6 +172,10 @@ impl Scheduler {
 
         let thread = std::thread::Builder::new().name("SchedulerProcess".to_string()).spawn(move || {
             log!("The scheduler process started");
+
+            std::panic::set_hook(Box::new(|info| {
+                log_panic!("{}", info)
+            }));
 
             while let Ok(command) = receiver.recv() {
                 match command {

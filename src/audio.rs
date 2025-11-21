@@ -3,7 +3,7 @@ use symphonia::{core::{audio::{SampleBuffer, SignalSpec}, codecs::{CODEC_TYPE_NU
 
 use std::{ffi::c_void, fs::File, path::PathBuf, sync::{mpsc::{RecvTimeoutError, SyncSender}}, thread::JoinHandle, time::Duration, vec::IntoIter};
 
-use crate::{event_queue::{Event, EventSender}, log, sample_rate_transformer::SampleRateConverter};
+use crate::{event_queue::{Event, EventSender}, log, log_panic, sample_rate_transformer::SampleRateConverter};
 
 
 
@@ -347,6 +347,10 @@ impl AudioPlayer {
     
         let thread = std::thread::spawn(move || {
             log!("AudioPlayer start");
+
+            std::panic::set_hook(Box::new(|info| {
+                log_panic!("{}", info)
+            }));
 
             let audio_player = AudioEngine::new();
 
