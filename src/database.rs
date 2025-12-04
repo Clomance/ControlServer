@@ -22,7 +22,7 @@ pub fn gen_id() -> String {
 
 #[derive(Serialize, Deserialize)]
 pub struct GlobalConfig {
-    pub tart_time: String,
+    pub start_time: String,
     pub end_time: String,
     pub volume: f32
 }
@@ -36,9 +36,9 @@ pub struct FileDatabase {
 
 impl FileDatabase {
     pub async fn open<P: AsRef<Path>>(path: P) -> Result<FileDatabase, String> {
-        let file = OpenOptions::new().read(true).write(true).create(true).open(&path).await.map_err(|e| format!("failed open db: {}", e))?;
-
         let path = path.as_ref().as_os_str().to_string_lossy().to_string();
+
+        let file = OpenOptions::new().read(true).write(true).create(true).open(&path).await.map_err(|e| format!("failed open {}: {}", path, e))?;
 
         Ok(
             FileDatabase {
@@ -50,10 +50,10 @@ impl FileDatabase {
 
     pub async fn save<D: Serialize>(&self, data: &D) -> Result<(), String> {
         let tmp = format!("{}.tmp", &self.path);
-        let json = serde_json::to_string_pretty(data).map_err(|e| format!("failed serialize: {}", e))?;
-        let mut f = File::create(&tmp).await.map_err(|e| format!("failed create tmp file: {}", e))?;
-        f.write_all(json.as_bytes()).await.map_err(|e| format!("failed write tmp file: {}", e))?;
-        tokio::fs::rename(&tmp, &self.path).await.map_err(|e| format!("failed rename tmp file: {}", e))?;
+        let json = serde_json::to_string_pretty(data).map_err(|e| format!("failed serialize {}: {}", self.path, e))?;
+        let mut f = File::create(&tmp).await.map_err(|e| format!("failed create tmp file {}: {}", tmp, e))?;
+        f.write_all(json.as_bytes()).await.map_err(|e| format!("failed write tmp file {}: {}", tmp, e))?;
+        tokio::fs::rename(&tmp, &self.path).await.map_err(|e| format!("failed rename tmp file {}: {}", tmp, e))?;
         Ok(())
     }
 }

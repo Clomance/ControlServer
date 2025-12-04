@@ -18,7 +18,8 @@ use std::{sync::Arc, thread::sleep, time::Duration};
 mod logger;
 
 
-pub static GLOBAL_CONFIG_DATABASE_FILE_PATH: &str = "database/playlists.json";
+
+pub static GLOBAL_CONFIG_DATABASE_FILE_PATH: &str = "database/config.json";
 pub static PLAYLISTS_DATABASE_FILE_PATH: &str = "database/playlists.json";
 pub static TRACKS_DATABASE_FILE_PATH: &str = "database/tracks.json";
 pub static TRACKS_DIRECTORY: &str = "records";
@@ -57,7 +58,9 @@ async fn main() {
     log!("Making up schedule");
     let scheduler = Scheduler::new(Vec::new(), event_sender.clone());
     for playlist in playlists.list().await {
-        scheduler.commander().add_task(SchedulerTask::new(&playlist.id, playlist.period));
+        if playlist.enabled {
+            scheduler.commander().add_task(SchedulerTask::new(&playlist.id, playlist.period));
+        }
     }
 
 

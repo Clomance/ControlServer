@@ -228,8 +228,9 @@
 
             class ServerAudioPlayer {
                 constructor() {
-                    this.volume = 50;
                     this.currentTrack = null;
+                    this.volume = 50;
+                    this.status = "Играет";
                 }
 
                 bindUI() {
@@ -238,39 +239,38 @@
                     $('btnPause').onclick = () => this.sendAction('pause');
                     $('btnNext').onclick = () => this.sendAction('next');
 
-                    this.update();
-                    setInterval(() => this.update(), 5000);
+                    this.getCurrentState();
+                    setInterval(() => this.getCurrentState(), 5000);
                 }
 
-                async update() {
+                async getCurrentState() {
                     try {
-                        await Promise.all(
-                            [
-                                this.getCurrentPlayingTrack(),
-                                this.getVolume()
-                            ]
-                        );
-                    }
-                    catch(err) {
-                        console.error(err);
-                    }
-                }
-
-                async getVolume() {
-                    try {
-                        let data = await api('/audio_player/volume');
+                        let data = await api('/audio_player/player');
+                        this.currentTrack = data.track || null;
                         this.volume = Math.round((data.volume || 0) * 100);
-                        $('globalVolume').value = this.volume;
+                        switch((data.status || "—").toLowerCase()) {
+                            case 'playing':
+                                this.status = 'Играет';
+                                break;
+                            case 'paused':
+                                this.status = 'Пауза';
+                                break;
+                            default:
+                                this.status = null;
+                        }
+
+                        $('currentTitle').textContent = this.currentTrack ? ('Текущий трек — ' + this.currentTrack) : 'Текущий трек — —';
+                        $('currentStatus').textContent = this.status ? ('Статус — ' + this.status) : 'Статус — —';
                     }
                     catch(err) {
-                        console.warn('Не удалось получить глобальную громкость',err);
+                        console.error('Ошибка получения данных плеера', err);
                     }
                 }
 
                 async setVolume(volume) {
                     let vol = Number(volume) / 100;
                     try {
-                        await api('/audio_player/volume/' + encodeURIComponent(vol), { method: 'POST' });
+                        await api('/audio_player/player/volume/' + encodeURIComponent(vol), { method: 'POST' });
                         this.volume = vol;
                     }
                     catch(err) {
@@ -280,7 +280,7 @@
 
                 async sendAction(action) {
                     try {
-                        await api('/audio_player/current/action/' + encodeURIComponent(action), { method: 'POST' });
+                        await api('/audio_player/player/action/' + encodeURIComponent(action), { method: 'POST' });
                     }
                     catch(err) {
                         alert('Ошибка действия: '+err.message);
@@ -289,22 +289,11 @@
 
                 async playTrack(playlist, track) {
                     try {
-                        await api('/audio_player/current/play/' + encodeURIComponent(playlist) + "/" + encodeURIComponent(track), { method: 'POST' });
+                        await api('/audio_player/player/play/' + encodeURIComponent(playlist) + "/" + encodeURIComponent(track), { method: 'POST' });
                         setTimeout(() => this.getCurrentPlayingTrack(), 100);
                     }
                     catch(err) {
                         console.error('Ошибка проигрывания трека', err);
-                    }
-                }
-
-                async getCurrentPlayingTrack() {
-                    try {
-                        let data = await api('/audio_player/current');
-                        this.currentTrack = data.track || null;
-                        $('currentTitle').textContent = this.currentTrack ? ('Текущий трек — ' + this.currentTrack) : 'Текущий трек — —';
-                    }
-                    catch(err) {
-                        console.error('Ошибка получения текущего трека', err);
                     }
                 }
             }
