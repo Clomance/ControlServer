@@ -75,6 +75,7 @@ impl Tracks {
 pub struct PlaylistInfo {
     pub id: String,
     pub name: String,
+    pub enabled: bool,
     pub tracks_count: usize
 }
 
@@ -83,6 +84,7 @@ impl PlaylistInfo {
         Self {
             id: playlist.id.clone(),
             name: playlist.name.clone(),
+            enabled: playlist.enabled,
             tracks_count: playlist.tracks.len()
         }
     }

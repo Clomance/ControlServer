@@ -65,7 +65,7 @@ pub async fn run_webserver_(
     let state = AppState {
         global_volume: Arc::new(Mutex::new(global_volume)),
         current_track,
-        status: Arc::new(RwLock::new("plaing".to_string())),
+        status: Arc::new(RwLock::new("playing".to_string())),
         audio_player,
         playlists,
         event_queue
@@ -79,22 +79,15 @@ pub async fn run_webserver_(
     let serve_dir = ServeDir::new(PathBuf::from(TRACKS_DIRECTORY));
 
     let app = Router::new()
-
         // Страницы
         .route("/", get(index))
         // .route("/audio_player/", get())
 
-        .route("/audio_player/player", get(get_current_state))
+        // Плеер
+        .route("/audio_player/player", get(get_player_state))
         .route("/audio_player/player/action/{action}", post(post_current_track_action))
         .route("/audio_player/player/play/{playlist}/{track_id}", post(post_current_track))
-        .route("/audio_player/player/volume/{volume}", post(post_global_volume))
-
-        // Плеер
-        .route("/audio_player/current", get(get_current_track))
-        .route("/audio_player/current/action/{action}", post(post_current_track_action))
-        .route("/audio_player/current/play/{playlist}/{track_id}", post(post_current_track))
-        .route("/audio_player/volume", get(get_global_volume))
-        .route("/audio_player/volume/{volume}", post(post_global_volume))
+        .route("/audio_player/player/volume/{volume}", post(post_player_volume))
 
         // Плейлисты
         .route("/audio_player/playlists", get(get_playlists))
@@ -137,7 +130,7 @@ async fn index() -> impl IntoResponse {
 
 
 /// 
-async fn get_current_state(State(state): State<AppState>) -> impl IntoResponse {
+async fn get_player_state(State(state): State<AppState>) -> impl IntoResponse {
     let current_track = state.current_track.read().await.clone();
     let volume = state.global_volume.lock().await.clone();
     let status = state.status.read().await.clone();
@@ -150,14 +143,6 @@ async fn get_current_state(State(state): State<AppState>) -> impl IntoResponse {
             }
         )
     )
-}
-
-
-
-/// 
-async fn get_current_track(State(state): State<AppState>) -> impl IntoResponse {
-    let current_track = state.current_track.read().await.clone();
-    Json(serde_json::json!({ "track": current_track }))
 }
 
 /// 
@@ -194,11 +179,7 @@ async fn post_current_track(
 }
 
 /// 
-async fn get_global_volume(State(state): State<AppState>) -> impl IntoResponse {
-    Json(serde_json::json!({ "volume": state.global_volume.lock().await.clone() }))
-}
-
-async fn post_global_volume(Path(volume): Path<String>, State(state): State<AppState>) -> impl IntoResponse {
+async fn post_player_volume(Path(volume): Path<String>, State(state): State<AppState>) -> impl IntoResponse {
     let mut volume: f32 = volume.parse().unwrap();
 
     if volume > 1f32 {
