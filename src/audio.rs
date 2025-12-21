@@ -1,5 +1,5 @@
 use cat_audio::{backend::{client::{render::AudioRenderClient, AudioClient}, host::{DeviceEnumerator, Host}}, CoTaskMemFree, DeviceRole, OutputBuffer,SampleTransform, ShareMode, StreamFlags, WaveFormat};
-use symphonia::{core::{audio::{SampleBuffer, SignalSpec}, codecs::{CODEC_TYPE_NULL, Decoder, DecoderOptions}, formats::{FormatOptions, FormatReader}, io::MediaSourceStream, meta::MetadataOptions}, default::{get_codecs, get_probe}};
+use symphonia::{core::{audio::{SampleBuffer, SignalSpec}, codecs::{CODEC_TYPE_NULL, Decoder, DecoderOptions}, errors::Error, formats::{FormatOptions, FormatReader}, io::MediaSourceStream, meta::MetadataOptions}, default::{get_codecs, get_probe}};
 
 use std::{ffi::c_void, fs::File, path::PathBuf, sync::{mpsc::{RecvTimeoutError, SyncSender}}, thread::JoinHandle, time::Duration, vec::IntoIter};
 
@@ -42,7 +42,7 @@ impl TrackReader {
     }
 
 
-    pub fn  next_packet(&mut self) -> Option<(SampleBuffer<f32>, SignalSpec)> {
+    pub fn next_packet(&mut self) -> Option<(SampleBuffer<f32>, SignalSpec)> {
         loop {
             let packet = match self.format.next_packet() {
                 Ok(packet) => packet,
@@ -66,7 +66,13 @@ impl TrackReader {
                     return Some((sample_buffer, spec))
                 }
 
-                Err(_) => return None
+                Err(Error::IoError(ref e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                    return None
+                }
+
+                Err(e) => {
+                    log!("{:?}", e)
+                }
             }
         }
     }
