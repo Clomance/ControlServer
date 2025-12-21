@@ -87,7 +87,6 @@ pub struct SoundObject {
     system_format: WaveFormat,
     next_samples: Option<Vec<f32>>,
     samples: SampleRateConverter<IntoIter<f32>>,
-    tryies: bool,
     playing: bool
 }
 
@@ -112,7 +111,6 @@ impl SoundObject {
                 system_format: system_format.clone(),
                 next_samples: None,
                 samples,
-                tryies: false,
                 playing: true
             }
         )
@@ -170,16 +168,8 @@ impl SoundObject {
                             self.samples = SampleRateConverter::new(next_samples.into_iter(), self.track_rate, self.system_format.sample_rate, self.track_channels as u32);
                         }
                         else {
-                            if self.tryies {
-                                self.playing = false
-                            }
-                            else {
-                                self.tryies = true
-                            }
+                            self.playing = false
                         }
-                    }
-                    else {
-                        self.tryies = false
                     }
                 }
             }
@@ -211,16 +201,8 @@ impl SoundObject {
                             self.samples = SampleRateConverter::new(next_samples.into_iter(), self.reader.decoder.codec_params().sample_rate.unwrap_or(48000), self.system_format.sample_rate, self.track_channels as u32);
                         }
                         else {
-                            if self.tryies {
-                                self.playing = false
-                            }
-                            else {
-                                self.tryies = true
-                            }
+                            self.playing = false
                         }
-                    }
-                    else {
-                        self.tryies = false
                     }
                 }
             }
@@ -252,16 +234,8 @@ impl SoundObject {
                             self.samples = SampleRateConverter::new(next_samples.into_iter(), self.reader.decoder.codec_params().sample_rate.unwrap_or(48000), self.system_format.sample_rate, self.track_channels as u32);
                         }
                         else {
-                            if self.tryies {
-                                self.playing = false
-                            }
-                            else {
-                                self.tryies = true
-                            }
+                            self.playing = false
                         }
-                    }
-                    else {
-                        self.tryies = false
                     }
                 }
             }
