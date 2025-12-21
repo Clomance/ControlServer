@@ -61,8 +61,8 @@ impl Display for MessageLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text = match self {
             MessageLevel::Common => "COMMON",
-            MessageLevel::Error => "ERROR",
-            MessageLevel::Panic => "PANIC"
+            MessageLevel::Error => "ERROR ",
+            MessageLevel::Panic => "PANIC "
         };
         f.write_str(text)
     }
@@ -71,6 +71,7 @@ impl Display for MessageLevel {
 
 
 pub struct Message {
+    thread: String,
     level: MessageLevel,
     text: String
 }
@@ -94,7 +95,8 @@ impl Logger {
 
     pub fn send_message(&self, level: MessageLevel, text: String) {
         if let Ok(sender) = self.sender.lock() {
-            let _ = sender.send(Message { level, text });
+            let thread = std::thread::current().name().unwrap_or("nameless").to_string();
+            let _ = sender.send(Message { thread, level, text });
         }
     }
 }
@@ -114,7 +116,7 @@ fn logger_thread(receiver: Receiver<Message>) {
 
     while let Ok(message) = receiver.recv() {
         let time = Local::now().format("%d.%m.%Y %H:%M:%S").to_string();
-        let line = format!("{} [{}] {}\n", time, message.level, message.text);
+        let line = format!("{} [{}][{}] {}\n", time, message.level, message.thread, message.text);
 
         let _ = file.write_all(line.as_bytes());
         let _ = file.flush();

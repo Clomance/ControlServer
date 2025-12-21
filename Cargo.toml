@@ -41,3 +41,8 @@ features = ["multipart"]
 [dependencies.cat_audio]
 path = "../CatEngineProject/cat_audio"
 version  = "0.1.0"
+
+
+[profile.release]
+lto = true
+opt-level = 3
